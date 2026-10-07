@@ -1,0 +1,366 @@
+{% extends 'registro/base.html' %}
+{% block title %}Motor de señales | Señales VIP del Latino{% endblock %}
+{% block content %}
+<main class="signals-page">
+  <section class="container signals-hero">
+    <div>
+      <span class="section-kicker">ACCESO VALIDADO · ID #{{ registration.quotex_id }}</span>
+      <h1 class="signals-title">Motor de <em>señales</em></h1>
+      <p class="signals-subtitle">
+        Análisis técnico en tiempo real con datos públicos de mercado. El sistema no ejecuta operaciones,
+        no usa martingala y no garantiza ganancias.
+      </p>
+    </div>
+    <div class="live-badge"><span></span> MOTOR ACTIVO</div>
+  </section>
+
+  <section class="container signal-layout">
+    <div class="signal-main">
+      <div class="signal-control-card">
+        <div class="signal-control-head">
+          <div>
+            <small>CONFIGURACIÓN</small>
+            <h2>Selecciona activo y duración</h2>
+          </div>
+          <span class="data-source">Fuente: Kraken</span>
+        </div>
+
+        <div class="asset-grid" id="assetGrid">
+          {% for asset in assets %}
+          <button class="asset-chip {% if forloop.first %}active{% endif %}" type="button" data-asset="{{ asset }}">
+            <span>{{ asset }}</span>
+          </button>
+          {% endfor %}
+        </div>
+
+        <div class="timeframe-row">
+          {% for tf in timeframes %}
+          <button class="tf-btn {% if tf == 1 %}active{% endif %}" type="button" data-timeframe="{{ tf }}">
+            {{ tf }} min
+          </button>
+          {% endfor %}
+        </div>
+
+        <button id="analyzeBtn" class="btn btn-primary btn-full signal-cta" type="button">
+          Analizar mercado ahora
+        </button>
+      </div>
+
+      <div class="signal-result-card" id="signalResult">
+        <div class="signal-result-top">
+          <div>
+            <small>SEÑAL ACTUAL</small>
+            <h2 id="signalAsset">BTC/USD · 1 min</h2>
+          </div>
+          <span id="signalState" class="signal-state wait">ESPERANDO</span>
+        </div>
+
+        <div class="signal-direction-wrap">
+          <div id="signalDirection" class="signal-direction wait">—</div>
+          <div>
+            <small>PUNTUACIÓN DE CONFLUENCIA</small>
+            <strong id="signalConfidence">—</strong>
+            <p id="signalStrategy">Selecciona una configuración y analiza.</p>
+          </div>
+        </div>
+
+        <div class="signal-metrics-grid">
+          <div><small>PRECIO REFERENCIA</small><strong id="entryPrice">—</strong></div>
+          <div><small>RSI 14</small><strong id="rsiValue">—</strong></div>
+          <div><small>VOLATILIDAD ATR</small><strong id="atrValue">—</strong></div>
+          <div><small>RIESGO SUGERIDO</small><strong id="riskValue">0.5%–1%</strong></div>
+        </div>
+
+        <div id="signalReasons" class="signal-reasons">
+          <span>El motor mostrará aquí las confluencias técnicas detectadas.</span>
+        </div>
+        <div class="signal-notice" id="signalNotice">
+          La puntuación de confianza es heurística y no representa una probabilidad garantizada de ganar.
+        </div>
+      </div>
+
+      <div class="risk-card">
+        <div>
+          <span class="section-kicker">GESTIÓN DE RIESGO</span>
+          <h2>Calculadora de exposición</h2>
+          <p>Define tu capital y el porcentaje máximo que aceptarías arriesgar por operación. Evita martingala y duplicar después de una pérdida.</p>
+        </div>
+        <div class="risk-form">
+          <label>Capital de referencia
+            <input id="bankroll" type="number" min="1" step="1" value="100">
+          </label>
+          <label>Riesgo por operación
+            <select id="riskPct">
+              <option value="0.5">0.5%</option>
+              <option value="0.75" selected>0.75%</option>
+              <option value="1">1%</option>
+              <option value="1.5">1.5%</option>
+              <option value="2">2% — máximo</option>
+            </select>
+          </label>
+          <div class="risk-output">
+            <small>EXPOSICIÓN MÁXIMA</small>
+            <strong id="riskAmount">$0.75</strong>
+          </div>
+        </div>
+        <div class="risk-rules">
+          <span>✓ Máximo sugerido: 2% por operación</span>
+          <span>✓ Pausa tras 3 pérdidas consecutivas</span>
+          <span>✓ Sin martingala</span>
+          <span>✓ Límite diario recomendado</span>
+        </div>
+      </div>
+    </div>
+
+    <aside class="signal-sidebar">
+      <div class="stats-card">
+        <small>HISTORIAL DEL MOTOR</small>
+        <div class="big-stat">
+          {% if summary.accuracy is not None %}
+          <strong>{{ summary.accuracy }}%</strong>
+          <span>precisión direccional cerrada</span>
+          {% else %}
+          <strong>—</strong>
+          <span>sin señales cerradas todavía</span>
+          {% endif %}
+        </div>
+        <div class="mini-stats">
+          <div><b>{{ summary.wins|default:0 }}</b><span>Ganadas</span></div>
+          <div><b>{{ summary.losses|default:0 }}</b><span>Perdidas</span></div>
+          <div><b>{{ summary.draws|default:0 }}</b><span>Empates</span></div>
+        </div>
+        <p class="stats-footnote">Se mide dirección usando la misma fuente pública. No equivale a P&amp;L real en Quotex ni incluye payout, spread o diferencias de cotización.</p>
+      </div>
+
+      <div class="leaderboard-card">
+        <div class="card-headline">
+          <div><small>RANKING REAL</small><h3>Mejores estrategias</h3></div>
+          <span class="verified-tag">DATOS MEDIDOS</span>
+        </div>
+        <div class="leaderboard-list">
+          {% for row in leaderboard %}
+          <div class="leaderboard-row">
+            <div class="rank-badge">{{ forloop.counter }}</div>
+            <div class="rank-info">
+              <strong>{{ row.strategy }}</strong>
+              <span>{{ row.total }} señales cerradas</span>
+            </div>
+            <div class="rank-rate">{{ row.accuracy }}%</div>
+          </div>
+          {% empty %}
+          <div class="leaderboard-empty">
+            El ranking aparecerá cuando el motor tenga señales cerradas suficientes. No mostramos ganancias inventadas.
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="support-card">
+        <div class="support-head">
+          <div>
+            <small>SOPORTE DIRECTO</small>
+            <h3>Habla con el administrador</h3>
+          </div>
+          <span class="support-dot"></span>
+        </div>
+        <div id="supportMessages" class="support-messages">
+          {% for item in support_messages %}
+          <div class="chat-bubble {{ item.sender }}">
+            <span>{{ item.text }}</span>
+            <small>{{ item.created_at|date:"H:i" }}</small>
+          </div>
+          {% empty %}
+          <div class="chat-placeholder">Escribe aquí si necesitas ayuda con tu acceso o con el uso del panel.</div>
+          {% endfor %}
+        </div>
+        <form id="supportForm" method="post">
+          {% csrf_token %}
+          <div class="support-compose">
+            <textarea id="supportInput" name="message" maxlength="1200" placeholder="Escribe tu mensaje…" required></textarea>
+            <button type="submit" aria-label="Enviar">➤</button>
+          </div>
+          <small id="supportStatus"></small>
+        </form>
+      </div>
+    </aside>
+  </section>
+
+  <section class="container transparency-card">
+    <div>
+      <span class="section-kicker">TRANSPARENCIA</span>
+      <h3>Cómo interpretar este motor</h3>
+    </div>
+    <p>
+      Los precios provienen de Kraken y pueden diferir de Quotex. Una señal CALL/PUT indica dirección técnica,
+      no una promesa de rendimiento. La precisión mostrada se calcula únicamente con señales generadas y cerradas
+      por este sistema; no se fabrican traders, operaciones ni ganancias.
+    </p>
+  </section>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  let selectedAsset = "{{ assets.0|escapejs }}";
+  let selectedTimeframe = 1;
+  const apiBase = "{% url 'registro:signal_api' registration.public_id %}";
+  const supportUrl = "{% url 'registro:support_api' registration.public_id %}";
+
+  const $ = (id) => document.getElementById(id);
+  const fmtPrice = (value) => {
+    if (value === null || value === undefined) return '—';
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '—';
+    return n >= 1000 ? n.toLocaleString(undefined, {maximumFractionDigits:2}) :
+           n >= 1 ? n.toFixed(4) : n.toFixed(6);
+  };
+
+  document.querySelectorAll('.asset-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.asset-chip').forEach(x => x.classList.remove('active'));
+      btn.classList.add('active');
+      selectedAsset = btn.dataset.asset;
+    });
+  });
+
+  document.querySelectorAll('.tf-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tf-btn').forEach(x => x.classList.remove('active'));
+      btn.classList.add('active');
+      selectedTimeframe = Number(btn.dataset.timeframe);
+    });
+  });
+
+  async function analyze() {
+    const button = $('analyzeBtn');
+    button.disabled = true;
+    button.textContent = 'Analizando mercado…';
+    $('signalState').textContent = 'ANALIZANDO';
+    $('signalState').className = 'signal-state wait';
+
+    try {
+      const url = new URL(apiBase, window.location.origin);
+      url.searchParams.set('asset', selectedAsset);
+      url.searchParams.set('timeframe', String(selectedTimeframe));
+      const response = await fetch(url, {cache:'no-store'});
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.error || 'No se pudo calcular la señal.');
+
+      const s = data.signal;
+      const a = s.analysis || {};
+      $('signalAsset').textContent = s.asset + ' · ' + s.timeframe + ' min';
+      $('entryPrice').textContent = fmtPrice(s.entry_price);
+      $('rsiValue').textContent = a.rsi !== undefined ? a.rsi : '—';
+      $('atrValue').textContent = a.atr_pct !== undefined ? a.atr_pct + '%' : '—';
+      $('riskValue').textContent = a.risk_pct !== undefined ? a.risk_pct + '%' : '0.5%–1%';
+      $('signalConfidence').textContent = s.confidence + '/100';
+      $('signalStrategy').textContent = s.strategy;
+      $('signalNotice').textContent = data.notice;
+
+      const direction = s.direction;
+      const directionEl = $('signalDirection');
+      const stateEl = $('signalState');
+      if (direction === 'CALL') {
+        directionEl.textContent = 'CALL ↑';
+        directionEl.className = 'signal-direction call';
+        stateEl.textContent = 'ALZA';
+        stateEl.className = 'signal-state call';
+      } else if (direction === 'PUT') {
+        directionEl.textContent = 'PUT ↓';
+        directionEl.className = 'signal-direction put';
+        stateEl.textContent = 'BAJA';
+        stateEl.className = 'signal-state put';
+      } else {
+        directionEl.textContent = 'ESPERAR';
+        directionEl.className = 'signal-direction wait';
+        stateEl.textContent = 'SIN ENTRADA';
+        stateEl.className = 'signal-state wait';
+      }
+
+      const reasons = Array.isArray(a.reasons) ? a.reasons : [];
+      $('signalReasons').innerHTML = reasons.length
+        ? reasons.map(x => '<span>• ' + String(x).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) + '</span>').join('')
+        : '<span>La señal activa fue calculada previamente y continúa vigente hasta su vencimiento.</span>';
+    } catch (err) {
+      $('signalState').textContent = 'ERROR';
+      $('signalState').className = 'signal-state put';
+      $('signalDirection').textContent = '—';
+      $('signalDirection').className = 'signal-direction wait';
+      $('signalStrategy').textContent = err.message;
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Analizar mercado ahora';
+    }
+  }
+  $('analyzeBtn').addEventListener('click', analyze);
+
+  function updateRisk() {
+    const bankroll = Math.max(0, Number($('bankroll').value) || 0);
+    const pct = Math.max(0, Number($('riskPct').value) || 0);
+    $('riskAmount').textContent = '$' + (bankroll * pct / 100).toFixed(2);
+  }
+  $('bankroll').addEventListener('input', updateRisk);
+  $('riskPct').addEventListener('change', updateRisk);
+  updateRisk();
+
+  function appendBubble(item) {
+    const container = $('supportMessages');
+    const placeholder = container.querySelector('.chat-placeholder');
+    if (placeholder) placeholder.remove();
+    const div = document.createElement('div');
+    div.className = 'chat-bubble ' + item.sender;
+    const span = document.createElement('span');
+    span.textContent = item.text;
+    const small = document.createElement('small');
+    const d = new Date(item.created_at);
+    small.textContent = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    div.append(span, small);
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  let supportSignature = '';
+  async function refreshSupport() {
+    try {
+      const response = await fetch(supportUrl, {cache:'no-store'});
+      const data = await response.json();
+      if (!data.ok) return;
+      const signature = JSON.stringify(data.messages);
+      if (signature === supportSignature) return;
+      supportSignature = signature;
+      const container = $('supportMessages');
+      container.innerHTML = '';
+      if (!data.messages.length) {
+        container.innerHTML = '<div class="chat-placeholder">Escribe aquí si necesitas ayuda con tu acceso o con el uso del panel.</div>';
+      } else {
+        data.messages.forEach(appendBubble);
+      }
+    } catch(e) {}
+  }
+
+  $('supportForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const input = $('supportInput');
+    const text = input.value.trim();
+    if (!text) return;
+    $('supportStatus').textContent = 'Enviando…';
+    const form = new FormData(event.currentTarget);
+    try {
+      const response = await fetch(supportUrl, {method:'POST', body:form});
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.error || 'No se pudo enviar.');
+      input.value = '';
+      $('supportStatus').textContent = 'Enviado a soporte ✓';
+      supportSignature = '';
+      await refreshSupport();
+    } catch(err) {
+      $('supportStatus').textContent = err.message;
+    }
+  });
+
+  setInterval(refreshSupport, 5000);
+  refreshSupport();
+})();
+</script>
+{% endblock %}
