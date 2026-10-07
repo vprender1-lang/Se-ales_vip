@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: senales-vip-del-latino
+    runtime: python
+    plan: free
+    buildCommand: bash build.sh
+    startCommand: bash start.sh
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "0"
+      - key: TELEGRAM_ADMIN_CHAT_ID
+        value: "7306800842"
