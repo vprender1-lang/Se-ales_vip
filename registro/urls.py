@@ -12,6 +12,7 @@ urlpatterns = [
     path('senales/', views.signals_dashboard, name='signals_dashboard'),
     path('senales/<uuid:public_id>/', views.legacy_signals_dashboard, name='legacy_signals_dashboard'),
     path('api/senales/', views.signal_api, name='signal_api'),
+    path('api/senales/historial/', views.signal_history_api, name='signal_history_api'),
     path('api/soporte/', views.support_api, name='support_api'),
     path('revision/<uuid:public_id>/<str:action>/', views.admin_review, name='admin_review'),
     path('telegram/webhook/', views.telegram_webhook, name='telegram_webhook'),
