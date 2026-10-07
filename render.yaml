@@ -12,3 +12,5 @@ services:
         value: "0"
       - key: TELEGRAM_ADMIN_CHAT_ID
         value: "7306800842"
+      - key: SIGNAL_REFERENCE_PAYOUT
+        value: "75"
