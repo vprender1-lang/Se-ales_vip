@@ -465,7 +465,6 @@ def get_or_create_signal(asset, timeframe):
         asset=asset,
         timeframe=timeframe,
         outcome=Signal.Outcome.OPEN,
-        expires_at__gt=now,
     ).order_by('-generated_at').first()
     if existing:
         return existing, None
