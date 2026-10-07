@@ -126,6 +126,7 @@ TELEGRAM_WEBHOOK_SECRET = os.getenv('TELEGRAM_WEBHOOK_SECRET', '')
 PUBLIC_URL = os.getenv('PUBLIC_URL', '').rstrip('/') or (f'https://{RENDER_EXTERNAL_HOSTNAME}' if RENDER_EXTERNAL_HOSTNAME else '')
 ADMIN_REVIEW_SECRET = os.getenv('ADMIN_REVIEW_SECRET', '')
 IP_HASH_SALT = os.getenv('IP_HASH_SALT', SECRET_KEY)
+SIGNAL_REFERENCE_PAYOUT = max(0, min(100, int(os.getenv('SIGNAL_REFERENCE_PAYOUT', '75'))))
 
 # Seguridad razonable en producción. Actívalo cuando uses HTTPS.
 if not DEBUG:
