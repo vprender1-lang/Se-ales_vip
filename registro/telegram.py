@@ -157,7 +157,7 @@ def set_webhook():
         'url': webhook_url,
         'secret_token': settings.TELEGRAM_WEBHOOK_SECRET,
         'allowed_updates': ['callback_query', 'message'],
-        'drop_pending_updates': True,
+        'drop_pending_updates': False,
     })
 
 
