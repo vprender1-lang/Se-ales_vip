@@ -1,0 +1,11 @@
+{% extends 'registro/base.html' %}
+{% block title %}Revisar solicitud{% endblock %}
+{% block content %}
+<main class="status-page"><section class="container status-layout"><div class="form-card status-main">
+  <span class="section-kicker">REVISIÓN DEL ADMINISTRADOR</span>
+  <h2>{% if action == 'aprobar' %}Aprobar{% else %}Rechazar{% endif %} solicitud</h2>
+  <div class="request-summary"><div><small>ID QUOTEX</small><strong>#{{ registration.quotex_id }}</strong></div><div><small>TELEGRAM</small><strong>@{{ registration.telegram_username }}</strong></div></div>
+  <p>Estado actual: <strong>{{ registration.get_status_display }}</strong>. Confirma solamente después de revisar el ID en tu panel de afiliados.</p>
+  <form method="post">{% csrf_token %}<input type="hidden" name="key" value="{{ key }}"><button class="btn {% if action == 'aprobar' %}btn-primary{% else %}btn-danger{% endif %} btn-full" type="submit">Confirmar: {% if action == 'aprobar' %}APROBAR{% else %}RECHAZAR{% endif %}</button></form>
+</div></section></main>
+{% endblock %}

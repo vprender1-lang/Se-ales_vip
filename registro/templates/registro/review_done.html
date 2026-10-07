@@ -1,0 +1,9 @@
+{% extends 'registro/base.html' %}
+{% block title %}Solicitud revisada{% endblock %}
+{% block content %}
+<main class="status-page"><section class="container status-layout"><div class="form-card status-main">
+  <span class="section-kicker">LISTO</span><h2>{% if action == 'aprobar' %}✅ Solicitud aprobada{% else %}❌ Solicitud rechazada{% endif %}</h2>
+  <p>ID Quotex <strong>#{{ registration.quotex_id }}</strong> · Telegram <strong>@{{ registration.telegram_username }}</strong></p>
+  <p>El usuario verá el nuevo estado automáticamente en su página de solicitud.</p>
+</div></section></main>
+{% endblock %}

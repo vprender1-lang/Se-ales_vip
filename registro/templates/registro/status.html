@@ -1,0 +1,80 @@
+{% extends 'registro/base.html' %}
+{% block title %}Estado de solicitud | Señales VIP del Latino{% endblock %}
+{% block content %}
+<main class="status-page">
+  <section class="container status-layout">
+    <div class="form-card status-main">
+      <div class="form-topline"><div><small>SOLICITUD {{ registration.public_id }}</small><h2>Estado de tu validación</h2></div><span id="statusChip" class="secure-chip status-{{ registration.status }}">{{ registration.get_status_display }}</span></div>
+      <div class="request-summary">
+        <div><small>ID QUOTEX</small><strong>#{{ registration.quotex_id }}</strong></div>
+        <div><small>TELEGRAM</small><strong>@{{ registration.telegram_username }}</strong></div>
+      </div>
+      <div id="statusPanel" class="status-card">
+        <div class="spinner {% if registration.status == 'approved' %}approved{% elif registration.status == 'rejected' %}rejected{% endif %}"></div>
+        <div>
+          <small>ESTADO ACTUAL</small>
+          <h3 id="statusTitle">{% if registration.status == 'approved' %}¡Solicitud aprobada!{% elif registration.status == 'rejected' %}Solicitud no validada{% else %}Pendiente de validación{% endif %}</h3>
+          <p id="statusText">{% if registration.status == 'approved' %}Tu ID fue aprobado por el administrador.{% elif registration.status == 'rejected' %}No se pudo confirmar tu registro. Revisa tu ID y el enlace utilizado.{% else %}Tu ID ya fue enviado al administrador por Telegram. Esta página actualizará el estado automáticamente cuando termine la validación.{% endif %}</p>
+          {% if telegram_vip_url and registration.status == 'approved' %}<a id="vipBtn" class="btn btn-primary" href="{{ telegram_vip_url }}" target="_blank" rel="noopener noreferrer">Entrar al VIP de Telegram ↗</a>{% else %}<a id="vipBtn" class="btn btn-primary hidden" href="#" target="_blank" rel="noopener noreferrer">Entrar al VIP de Telegram ↗</a>{% endif %}
+        </div>
+      </div>
+
+      {% if telegram_admin_username %}
+      <div class="telegram-send-box">
+        <h3>Ahora envía tu ID por Telegram</h3>
+        <p>Al pulsar el botón copiaremos el mensaje y abriremos el chat del administrador. Pégalo y envíalo.</p>
+        <textarea id="telegramMessage" readonly>{{ telegram_message }}</textarea>
+        <button id="telegramSendBtn" class="btn btn-primary btn-full" data-url="https://t.me/{{ telegram_admin_username }}">Copiar mensaje y abrir Telegram ↗</button>
+      </div>
+      {% else %}
+      <div class="safe-box"><strong>Falta configurar tu Telegram</strong><p>Define <code>TELEGRAM_ADMIN_USERNAME</code> en el archivo <code>.env</code> para que aparezca aquí el botón directo a tu chat.</p></div>
+      {% endif %}
+      <a class="mini-link back-link" href="{% url 'registro:home' %}">← Volver al inicio</a>
+    </div>
+  </section>
+</main>
+{% endblock %}
+{% block scripts %}
+<script>
+const statusUrl = "{% url 'registro:status_json' registration.public_id %}";
+const vipConfiguredUrl = "{{ telegram_vip_url|escapejs }}";
+const titleEl = document.getElementById('statusTitle');
+const textEl = document.getElementById('statusText');
+const chip = document.getElementById('statusChip');
+const spinner = document.querySelector('#statusPanel .spinner');
+const vipBtn = document.getElementById('vipBtn');
+async function refreshStatus(){
+  try {
+    const response = await fetch(statusUrl, {cache:'no-store'});
+    if(!response.ok) return;
+    const data = await response.json();
+    chip.textContent = data.status_label;
+    chip.className = 'secure-chip status-' + data.status;
+    spinner.className = 'spinner' + (data.status === 'approved' ? ' approved' : data.status === 'rejected' ? ' rejected' : '');
+    if(data.status === 'approved'){
+      titleEl.textContent = '¡Solicitud aprobada!';
+      textEl.textContent = 'Tu ID fue aprobado por el administrador.';
+      if(data.vip_url){ vipBtn.href = data.vip_url; vipBtn.classList.remove('hidden'); }
+    } else if(data.status === 'rejected'){
+      titleEl.textContent = 'Solicitud no validada';
+      textEl.textContent = 'No se pudo confirmar tu registro. Revisa tu ID y el enlace utilizado.';
+    } else {
+      titleEl.textContent = 'Pendiente de validación';
+      textEl.textContent = 'Tu ID ya fue enviado al administrador por Telegram. Esta página actualizará el estado automáticamente cuando termine la validación.';
+    }
+  } catch(e) {}
+}
+setInterval(refreshStatus, 6000);
+const sendBtn = document.getElementById('telegramSendBtn');
+if(sendBtn){
+  sendBtn.addEventListener('click', async () => {
+    const text = document.getElementById('telegramMessage').value;
+    try { await navigator.clipboard.writeText(text); } catch(e) {
+      const ta = document.getElementById('telegramMessage'); ta.select(); document.execCommand('copy');
+    }
+    window.open(sendBtn.dataset.url, '_blank', 'noopener');
+    sendBtn.textContent = 'Mensaje copiado — pégalo en Telegram ✓';
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,24 @@
+SEÑALES VIP DEL LATINO - TELEGRAM
+=================================
+
+Tu Telegram ID ya quedó configurado:
+7306800842
+
+SOLO FALTA TU BOT TOKEN:
+1. En Telegram abre @BotFather
+2. /newbot
+3. Crea el bot
+4. Copia el token
+5. Copia .env.example a .env
+6. En .env pega:
+   TELEGRAM_BOT_TOKEN=TU_TOKEN
+   TELEGRAM_ADMIN_CHAT_ID=7306800842
+7. Abre tu nuevo bot y pulsa START
+
+AL PUBLICAR EL SITIO CON HTTPS:
+- Configura PUBLIC_URL=https://tu-dominio.com
+- Configura TELEGRAM_WEBHOOK_SECRET=una_clave_larga
+- Ejecuta: python manage.py telegram_set_webhook
+
+FLUJO:
+Cliente registra ID -> recibes mensaje -> abres QuotexPartnerBot -> verificas ID -> Aprobar/Rechazar -> cliente ve el resultado.

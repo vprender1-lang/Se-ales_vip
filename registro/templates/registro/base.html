@@ -1,0 +1,47 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07111f">
+  <meta name="description" content="Registro gratuito para solicitar acceso a Señales VIP del Latino.">
+  <title>{% block title %}Señales VIP del Latino{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'registro/styles.css' %}">
+  <link rel="stylesheet" href="{% static 'registro/django.css' %}">
+</head>
+<body>
+  <div class="noise"></div>
+  <header class="nav-wrap">
+    <nav class="nav container">
+      <a class="brand" href="{% url 'registro:home' %}" aria-label="Señales VIP del Latino">
+        <span class="brand-mark">L</span>
+        <span><strong>SEÑALES VIP</strong><small>DEL LATINO</small></span>
+      </a>
+      <div class="nav-actions">
+        <a class="nav-link" href="{% url 'registro:home' %}#como-funciona">Cómo funciona</a>
+        <a class="btn btn-small btn-outline" href="{{ quotex_login_url|default:'#' }}" target="_blank" rel="noopener noreferrer">Iniciar sesión</a>
+      </div>
+    </nav>
+  </header>
+
+  {% if messages %}
+  <div class="container message-stack">
+    {% for message in messages %}<div class="flash {{ message.tags }}">{{ message }}</div>{% endfor %}
+  </div>
+  {% endif %}
+
+  {% block content %}{% endblock %}
+
+  <footer>
+    <div class="container footer-row">
+      <div class="brand footer-brand"><span class="brand-mark">L</span><span><strong>SEÑALES VIP</strong><small>DEL LATINO</small></span></div>
+      <p>Comunidad independiente. Quotex es una marca de terceros. No solicitamos contraseñas ni códigos 2FA.</p>
+    </div>
+  </footer>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

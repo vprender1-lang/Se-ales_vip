@@ -1,0 +1,82 @@
+{% extends 'registro/base.html' %}
+{% block title %}Señales VIP del Latino | Registro{% endblock %}
+{% block content %}
+<main id="inicio">
+  <section class="hero container">
+    <div class="hero-copy">
+      <div class="eyebrow"><span></span> ACCESO GRATUITO • VALIDACIÓN MANUAL</div>
+      <h1>Únete a <em>Señales VIP del Latino</em></h1>
+      <p class="hero-text">Crea tu cuenta desde nuestro enlace de afiliado, vuelve con tu ID de Quotex y envíalo para revisión. Tú mismo podrás ver cuándo quede aprobado.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="{{ affiliate_url }}" target="_blank" rel="noopener noreferrer sponsored">Crear cuenta gratis en Quotex <span>↗</span></a>
+        <a class="btn btn-ghost" href="#registro">Ya tengo mi ID — validar</a>
+      </div>
+      <div class="trust-row">
+        <div><b>01</b><span>Registro por tu enlace</span></div>
+        <div><b>02</b><span>Envío del ID</span></div>
+        <div><b>03</b><span>Validación por Telegram</span></div>
+      </div>
+    </div>
+    <aside class="broker-card" aria-label="Banner de Quotex">
+      <div class="broker-card-head"><span class="status-dot"></span><span>ENLACE DE REGISTRO</span></div>
+      <a href="{{ affiliate_url }}" target="_blank" rel="noopener noreferrer sponsored" class="banner-link">
+        <img src="https://static.quotex.io/files/26_es/320_250.jpg" alt="Banner promocional de Quotex">
+      </a>
+      <p>Para poder revisar la referencia, usa este enlace antes de enviar tu ID.</p>
+      <a href="{{ affiliate_url }}" target="_blank" rel="noopener noreferrer sponsored" class="mini-link">Abrir registro de Quotex ↗</a>
+    </aside>
+  </section>
+
+  <section class="metrics container">
+    <article><span class="metric-icon">✓</span><div><b>Proceso simple</b><p>Solo pedimos el ID de Quotex y tu usuario de Telegram.</p></div></article>
+    <article><span class="metric-icon">🔒</span><div><b>Sin contraseñas</b><p>Nunca pedimos contraseña, códigos SMS ni 2FA.</p></div></article>
+    <article><span class="metric-icon">✈</span><div><b>Llega a tu Telegram</b><p>El administrador recibe automáticamente cada solicitud.</p></div></article>
+  </section>
+
+  <section id="como-funciona" class="section container">
+    <div class="section-heading"><span>PROCESO</span><h2>Cómo obtener acceso</h2><p>Hazlo en este orden para que podamos revisar correctamente tu registro.</p></div>
+    <div class="steps-grid">
+      <article class="step-card"><span>1</span><h3>Regístrate</h3><p>Abre Quotex usando el botón de esta página y crea tu cuenta.</p></article>
+      <article class="step-card"><span>2</span><h3>Copia tu ID</h3><p>En tu cuenta busca y copia tu identificador numérico.</p></article>
+      <article class="step-card"><span>3</span><h3>Envía tu ID</h3><p>Colócalo aquí junto con tu usuario de Telegram.</p></article>
+      <article class="step-card"><span>4</span><h3>Validación</h3><p>El administrador recibe tu ID en Telegram, lo comprueba con QuotexPartnerBot y aprueba o rechaza la solicitud.</p></article>
+    </div>
+  </section>
+
+  <section id="registro" class="registration-section">
+    <div class="container registration-grid">
+      <div class="registration-copy">
+        <span class="section-kicker">VERIFICACIÓN</span>
+        <h2>Solicita tu acceso VIP</h2>
+        <p>Al enviarlo, el sistema guarda la solicitud y manda automáticamente tu ID al Telegram del administrador para que lo revise.</p>
+        <div class="safe-box"><strong>Importante</strong><p>No compartas contraseña, PIN, códigos SMS/2FA, datos bancarios ni acceso remoto a tu dispositivo.</p></div>
+      </div>
+      <div class="form-card">
+        <div class="form-topline"><div><small>SOLICITUD DE ACCESO</small><h3>Validar ID de Quotex</h3></div><span class="secure-chip">● Seguro</span></div>
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {{ form.website }}
+          <div class="field">
+            <label for="{{ form.quotex_id.id_for_label }}">ID de Quotex</label>
+            <div class="input-shell"><span>#</span>{{ form.quotex_id }}</div>
+            {% for error in form.quotex_id.errors %}<small class="error-text">{{ error }}</small>{% empty %}<small>Solo números. No escribas tu contraseña.</small>{% endfor %}
+          </div>
+          <div class="field">
+            <label for="{{ form.telegram_username.id_for_label }}">Usuario de Telegram</label>
+            <div class="input-shell"><span>@</span>{{ form.telegram_username }}</div>
+            {% for error in form.telegram_username.errors %}<small class="error-text">{{ error }}</small>{% empty %}<small>Ejemplo: mi_usuario</small>{% endfor %}
+          </div>
+          <label class="check-row">{{ form.accepted_review }}<span>Acepto que mi ID sea revisado para comprobar si corresponde al enlace de afiliado.</span></label>
+          <label class="check-row">{{ form.adult_confirmed }}<span>Confirmo que soy mayor de 18 años.</span></label>
+          {% for error in form.non_field_errors %}<div class="form-message error">{{ error }}</div>{% endfor %}
+          <button class="btn btn-primary btn-full" type="submit">Enviar mi ID para validación</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="section container disclaimer-section">
+    <div class="disclaimer-card"><div><span class="warning-icon">!</span></div><div><h3>Aviso de riesgo</h3><p>El trading implica riesgo de pérdida. Las señales no garantizan ganancias ni resultados. Opera solo con dinero que puedas permitirte perder y revisa las reglas aplicables en tu jurisdicción.</p></div></div>
+  </section>
+</main>
+{% endblock %}
