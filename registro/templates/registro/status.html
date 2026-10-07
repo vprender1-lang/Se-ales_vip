@@ -15,7 +15,8 @@
           <small>ESTADO ACTUAL</small>
           <h3 id="statusTitle">{% if registration.status == 'approved' %}¡Solicitud aprobada!{% elif registration.status == 'rejected' %}Solicitud no validada{% else %}Pendiente de validación{% endif %}</h3>
           <p id="statusText">{% if registration.status == 'approved' %}Tu ID fue aprobado por el administrador.{% elif registration.status == 'rejected' %}No se pudo confirmar tu registro. Revisa tu ID y el enlace utilizado.{% else %}Tu ID ya fue enviado al administrador por Telegram. Esta página actualizará el estado automáticamente cuando termine la validación.{% endif %}</p>
-          {% if telegram_vip_url and registration.status == 'approved' %}<a id="vipBtn" class="btn btn-primary" href="{{ telegram_vip_url }}" target="_blank" rel="noopener noreferrer">Entrar al VIP de Telegram ↗</a>{% else %}<a id="vipBtn" class="btn btn-primary hidden" href="#" target="_blank" rel="noopener noreferrer">Entrar al VIP de Telegram ↗</a>{% endif %}
+          {% if registration.status == 'approved' %}<a id="signalsBtn" class="btn btn-primary" href="{% url 'registro:signals_dashboard' registration.public_id %}">Abrir motor de señales →</a>{% else %}<a id="signalsBtn" class="btn btn-primary hidden" href="#">Abrir motor de señales →</a>{% endif %}
+          {% if telegram_vip_url and registration.status == 'approved' %}<a id="vipBtn" class="btn btn-ghost" href="{{ telegram_vip_url }}" target="_blank" rel="noopener noreferrer">Entrar al VIP de Telegram ↗</a>{% else %}<a id="vipBtn" class="btn btn-ghost hidden" href="#" target="_blank" rel="noopener noreferrer">Entrar al VIP de Telegram ↗</a>{% endif %}
         </div>
       </div>
 
@@ -43,6 +44,7 @@ const textEl = document.getElementById('statusText');
 const chip = document.getElementById('statusChip');
 const spinner = document.querySelector('#statusPanel .spinner');
 const vipBtn = document.getElementById('vipBtn');
+const signalsBtn = document.getElementById('signalsBtn');
 async function refreshStatus(){
   try {
     const response = await fetch(statusUrl, {cache:'no-store'});
@@ -54,6 +56,7 @@ async function refreshStatus(){
     if(data.status === 'approved'){
       titleEl.textContent = '¡Solicitud aprobada!';
       textEl.textContent = 'Tu ID fue aprobado por el administrador.';
+      if(data.signals_url){ signalsBtn.href = data.signals_url; signalsBtn.classList.remove('hidden'); }
       if(data.vip_url){ vipBtn.href = data.vip_url; vipBtn.classList.remove('hidden'); }
     } else if(data.status === 'rejected'){
       titleEl.textContent = 'Solicitud no validada';
