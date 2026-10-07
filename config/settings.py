@@ -94,9 +94,13 @@ STORAGES = {
         'BACKEND': 'django.core.files.storage.FileSystemStorage',
     },
     'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        # No depende de staticfiles.json para renderizar las plantillas.
+        # Esto evita un HTTP 500 si Render arranca antes de ejecutar collectstatic.
+        'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
     },
 }
+# Respaldo para que WhiteNoise también encuentre los estáticos dentro de las apps.
+WHITENOISE_USE_FINDERS = True
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Sitio / afiliación
