@@ -1,4 +1,6 @@
 import json
+import math
+import statistics
 import time
 import urllib.parse
 import urllib.request
@@ -14,11 +16,9 @@ from .models import Signal
 KRAKEN_URL = 'https://api.kraken.com/0/public/OHLC'
 YAHOO_URL = 'https://query2.finance.yahoo.com/v8/finance/chart/{symbol}'
 TIMEFRAMES = (1, 5, 15)
+SIGNAL_ENTRY_DELAY_SECONDS = 60
 
-# Catálogo de pares de divisas y criptomonedas publicado por Quotex.
-# Los OTC no se mezclan con precios externos: su cotización puede ser propia de la plataforma.
 ASSETS = {
-    # Forex principales
     'EUR/USD': {'category': 'Forex', 'group': 'Principales', 'provider': 'yahoo', 'symbol': 'EURUSD=X'},
     'GBP/USD': {'category': 'Forex', 'group': 'Principales', 'provider': 'yahoo', 'symbol': 'GBPUSD=X'},
     'USD/JPY': {'category': 'Forex', 'group': 'Principales', 'provider': 'yahoo', 'symbol': 'JPY=X'},
@@ -26,8 +26,6 @@ ASSETS = {
     'USD/CAD': {'category': 'Forex', 'group': 'Principales', 'provider': 'yahoo', 'symbol': 'CAD=X'},
     'USD/CHF': {'category': 'Forex', 'group': 'Principales', 'provider': 'yahoo', 'symbol': 'CHF=X'},
     'NZD/USD': {'category': 'Forex', 'group': 'Principales', 'provider': 'yahoo', 'symbol': 'NZDUSD=X'},
-
-    # Forex cruces
     'EUR/GBP': {'category': 'Forex', 'group': 'Cruces', 'provider': 'yahoo', 'symbol': 'EURGBP=X'},
     'EUR/JPY': {'category': 'Forex', 'group': 'Cruces', 'provider': 'yahoo', 'symbol': 'EURJPY=X'},
     'GBP/JPY': {'category': 'Forex', 'group': 'Cruces', 'provider': 'yahoo', 'symbol': 'GBPJPY=X'},
@@ -44,8 +42,6 @@ ASSETS = {
     'AUD/NZD': {'category': 'Forex', 'group': 'Cruces', 'provider': 'yahoo', 'symbol': 'AUDNZD=X'},
     'EUR/NZD': {'category': 'Forex', 'group': 'Cruces', 'provider': 'yahoo', 'symbol': 'EURNZD=X'},
     'GBP/NZD': {'category': 'Forex', 'group': 'Cruces', 'provider': 'yahoo', 'symbol': 'GBPNZD=X'},
-
-    # Forex exóticos
     'USD/SGD': {'category': 'Forex', 'group': 'Exóticos', 'provider': 'yahoo', 'symbol': 'SGD=X'},
     'USD/HKD': {'category': 'Forex', 'group': 'Exóticos', 'provider': 'yahoo', 'symbol': 'HKD=X'},
     'USD/TRY': {'category': 'Forex', 'group': 'Exóticos', 'provider': 'yahoo', 'symbol': 'TRY=X'},
@@ -55,8 +51,6 @@ ASSETS = {
     'USD/NOK': {'category': 'Forex', 'group': 'Exóticos', 'provider': 'yahoo', 'symbol': 'NOK=X'},
     'USD/SEK': {'category': 'Forex', 'group': 'Exóticos', 'provider': 'yahoo', 'symbol': 'SEK=X'},
     'USD/DKK': {'category': 'Forex', 'group': 'Exóticos', 'provider': 'yahoo', 'symbol': 'DKK=X'},
-
-    # Criptomonedas
     'BTC/USD': {'category': 'Cripto', 'group': 'Cripto', 'provider': 'kraken', 'symbol': 'XBTUSD', 'fallback': 'BTC-USD'},
     'ETH/USD': {'category': 'Cripto', 'group': 'Cripto', 'provider': 'kraken', 'symbol': 'ETHUSD', 'fallback': 'ETH-USD'},
     'LTC/USD': {'category': 'Cripto', 'group': 'Cripto', 'provider': 'kraken', 'symbol': 'LTCUSD', 'fallback': 'LTC-USD'},
@@ -108,7 +102,7 @@ def _fetch_kraken(symbol, timeframe, limit):
     query = urllib.parse.urlencode({'pair': symbol, 'interval': timeframe})
     req = urllib.request.Request(
         f'{KRAKEN_URL}?{query}',
-        headers={'User-Agent': 'SenalesVIPLatino/2.0'},
+        headers={'User-Agent': 'SenalesVIPLatino/3.0'},
     )
     with urllib.request.urlopen(req, timeout=8) as response:
         payload = json.loads(response.read().decode('utf-8'))
@@ -121,17 +115,14 @@ def _fetch_kraken(symbol, timeframe, limit):
     if not pair_key:
         raise MarketDataError('Kraken no devolvió velas.')
 
-    candles = []
-    for row in result[pair_key][-limit:]:
-        candles.append({
-            'time': int(float(row[0])),
-            'open': float(row[1]),
-            'high': float(row[2]),
-            'low': float(row[3]),
-            'close': float(row[4]),
-            'volume': float(row[6] or 0),
-        })
-    return candles
+    return [{
+        'time': int(float(row[0])),
+        'open': float(row[1]),
+        'high': float(row[2]),
+        'low': float(row[3]),
+        'close': float(row[4]),
+        'volume': float(row[6] or 0),
+    } for row in result[pair_key][-limit:]]
 
 
 def _fetch_yahoo(symbol, timeframe, limit):
@@ -145,10 +136,7 @@ def _fetch_yahoo(symbol, timeframe, limit):
     })
     req = urllib.request.Request(
         f"{YAHOO_URL.format(symbol=urllib.parse.quote(symbol, safe='^=-'))}?{query}",
-        headers={
-            'User-Agent': 'Mozilla/5.0 SenalesVIPLatino/2.0',
-            'Accept': 'application/json',
-        },
+        headers={'User-Agent': 'Mozilla/5.0 SenalesVIPLatino/3.0', 'Accept': 'application/json'},
     )
     with urllib.request.urlopen(req, timeout=8) as response:
         payload = json.loads(response.read().decode('utf-8'))
@@ -178,26 +166,25 @@ def _fetch_yahoo(symbol, timeframe, limit):
             continue
         if None in (o, h, l, c):
             continue
-        volume = volumes[i] if i < len(volumes) and volumes[i] is not None else 0
         candles.append({
             'time': int(ts),
             'open': float(o),
             'high': float(h),
             'low': float(l),
             'close': float(c),
-            'volume': float(volume),
+            'volume': float(volumes[i]) if i < len(volumes) and volumes[i] is not None else 0,
         })
     return candles[-limit:]
 
 
-def fetch_ohlc(asset='EUR/USD', timeframe=1, limit=180):
+def fetch_ohlc(asset='EUR/USD', timeframe=1, limit=220):
     if asset not in ASSETS:
         raise MarketDataError('Activo no soportado.')
     if int(timeframe) not in TIMEFRAMES:
         raise MarketDataError('Temporalidad no soportada.')
 
     timeframe = int(timeframe)
-    key = ('ohlc-v2', asset, timeframe)
+    key = ('ohlc-v3', asset, timeframe)
     cached = _cached(key, max(8, min(25, timeframe * 4)))
     if cached:
         return cached
@@ -213,19 +200,13 @@ def fetch_ohlc(asset='EUR/USD', timeframe=1, limit=180):
         except Exception:
             fallback = meta.get('fallback')
             if fallback:
-                try:
-                    candles = _fetch_yahoo(fallback, timeframe, limit)
-                    source = 'Yahoo Finance public chart data'
-                except Exception as exc:
-                    raise MarketDataError(f'No se pudo consultar {asset}: {exc}') from exc
+                candles = _fetch_yahoo(fallback, timeframe, limit)
+                source = 'Yahoo Finance public chart data'
     else:
-        try:
-            candles = _fetch_yahoo(meta['symbol'], timeframe, limit)
-            source = 'Yahoo Finance public chart data'
-        except Exception as exc:
-            raise MarketDataError(f'No se pudo consultar {asset}: {exc}') from exc
+        candles = _fetch_yahoo(meta['symbol'], timeframe, limit)
+        source = 'Yahoo Finance public chart data'
 
-    if not candles or len(candles) < 40:
+    if not candles or len(candles) < 55:
         raise MarketDataError('Aún no hay suficientes velas para calcular una señal fiable.')
 
     result = {'candles': candles, 'source': source, 'meta': meta}
@@ -271,6 +252,40 @@ def _atr(candles, period=14):
     return sum(trs[-period:]) / min(period, len(trs)) if trs else 0.0
 
 
+def _stochastic(candles, period=14):
+    window = candles[-period:]
+    low = min(c['low'] for c in window)
+    high = max(c['high'] for c in window)
+    if high == low:
+        return 50.0
+    return (window[-1]['close'] - low) / (high - low) * 100
+
+
+def _bollinger_position(closes, period=20):
+    window = closes[-period:]
+    mean = statistics.fmean(window)
+    std = statistics.pstdev(window) if len(window) > 1 else 0
+    if std == 0:
+        return 0.0
+    return (closes[-1] - mean) / (2 * std)
+
+
+def _support_resistance(candles, period=20):
+    window = candles[-period-1:-1]
+    return min(c['low'] for c in window), max(c['high'] for c in window)
+
+
+def _market_price_at(asset, target_dt):
+    market = fetch_ohlc(asset, 1, limit=300)
+    candles = market['candles']
+    target_ts = int(target_dt.timestamp())
+    nearest = min(candles, key=lambda c: abs(int(c['time']) - target_ts))
+    distance = abs(int(nearest['time']) - target_ts)
+    if distance > 180:
+        raise MarketDataError('No hay una cotización suficientemente cercana al momento de la señal.')
+    return Decimal(str(nearest['close'])), market['source']
+
+
 def analyze_market(asset, timeframe):
     market = fetch_ohlc(asset, timeframe)
     candles = market['candles']
@@ -279,72 +294,109 @@ def analyze_market(asset, timeframe):
     closes = [c['close'] for c in candles]
     volumes = [c['volume'] for c in candles]
 
-    ema9_series = _ema_series(closes, 9)
-    ema21_series = _ema_series(closes, 21)
+    ema9s = _ema_series(closes, 9)
+    ema21s = _ema_series(closes, 21)
+    ema50s = _ema_series(closes, 50)
     ema12 = _ema_series(closes, 12)
     ema26 = _ema_series(closes, 26)
     macd_series = [a - b for a, b in zip(ema12, ema26)]
     macd_signal = _ema_series(macd_series, 9)
 
     price = closes[-1]
-    ema9 = ema9_series[-1]
-    ema21 = ema21_series[-1]
-    rsi = _rsi(closes, 14)
+    ema9, ema21, ema50 = ema9s[-1], ema21s[-1], ema50s[-1]
+    rsi = _rsi(closes)
+    stochastic = _stochastic(candles)
+    bollinger_pos = _bollinger_position(closes)
     macd_hist = macd_series[-1] - macd_signal[-1]
-    atr = _atr(candles, 14)
-    momentum = (price / closes[-4] - 1) * 100 if closes[-4] else 0
+    atr = _atr(candles)
+    momentum3 = (price / closes[-4] - 1) * 100 if closes[-4] else 0
+    momentum8 = (price / closes[-9] - 1) * 100 if closes[-9] else 0
+    support, resistance = _support_resistance(candles)
 
     nonzero_volumes = [v for v in volumes[-20:] if v and v > 0]
-    avg_volume = sum(nonzero_volumes) / len(nonzero_volumes) if nonzero_volumes else 0
+    avg_volume = statistics.fmean(nonzero_volumes) if nonzero_volumes else 0
     volume_ratio = (volumes[-1] / avg_volume) if avg_volume and volumes[-1] else 1.0
 
     score = 0.0
     reasons = []
 
-    if ema9 > ema21:
-        score += 2.0
+    if ema9 > ema21 > ema50:
+        score += 2.5
+        reasons.append('Tendencia alcista alineada EMA 9/21/50')
+    elif ema9 < ema21 < ema50:
+        score -= 2.5
+        reasons.append('Tendencia bajista alineada EMA 9/21/50')
+    elif ema9 > ema21:
+        score += 1.2
         reasons.append('EMA 9 por encima de EMA 21')
     elif ema9 < ema21:
-        score -= 2.0
+        score -= 1.2
         reasons.append('EMA 9 por debajo de EMA 21')
 
     if macd_hist > 0:
-        score += 1.35
-        reasons.append('MACD con impulso alcista')
+        score += 1.4
+        reasons.append('MACD confirma impulso alcista')
     elif macd_hist < 0:
-        score -= 1.35
-        reasons.append('MACD con impulso bajista')
+        score -= 1.4
+        reasons.append('MACD confirma impulso bajista')
 
-    if 52 <= rsi <= 69:
-        score += 1.0
-        reasons.append(f'RSI favorable al alza ({rsi:.1f})')
-    elif 31 <= rsi <= 48:
-        score -= 1.0
-        reasons.append(f'RSI favorable a la baja ({rsi:.1f})')
-    elif rsi >= 74:
-        score -= .55
-        reasons.append(f'RSI en sobrecompra ({rsi:.1f})')
-    elif rsi <= 26:
+    if 53 <= rsi <= 68:
+        score += .9
+        reasons.append(f'RSI acompaña al alza ({rsi:.1f})')
+    elif 32 <= rsi <= 47:
+        score -= .9
+        reasons.append(f'RSI acompaña a la baja ({rsi:.1f})')
+    elif rsi >= 75:
+        score -= .45
+        reasons.append('RSI en sobrecompra')
+    elif rsi <= 25:
+        score += .45
+        reasons.append('RSI en sobreventa')
+
+    if stochastic >= 58 and stochastic < 88:
         score += .55
-        reasons.append(f'RSI en sobreventa ({rsi:.1f})')
+        reasons.append('Estocástico sostiene impulso alcista')
+    elif stochastic <= 42 and stochastic > 12:
+        score -= .55
+        reasons.append('Estocástico sostiene impulso bajista')
 
-    if momentum > .04:
-        score += .75
-        reasons.append('Momentum reciente positivo')
-    elif momentum < -.04:
-        score -= .75
-        reasons.append('Momentum reciente negativo')
+    if momentum3 > .035 and momentum8 > 0:
+        score += .85
+        reasons.append('Momentum corto y medio positivo')
+    elif momentum3 < -.035 and momentum8 < 0:
+        score -= .85
+        reasons.append('Momentum corto y medio negativo')
 
-    if volume_ratio >= 1.18 and nonzero_volumes:
+    if price > resistance:
+        score += 1.15
+        reasons.append('Ruptura de resistencia reciente')
+    elif price < support:
+        score -= 1.15
+        reasons.append('Ruptura de soporte reciente')
+
+    last = candles[-1]
+    body = last['close'] - last['open']
+    body_pct = abs(body) / price * 100 if price else 0
+    if body_pct > .015:
+        score += .35 if body > 0 else -.35
+        reasons.append('Última vela confirma dirección')
+
+    if bollinger_pos > .85:
+        score -= .25
+        reasons.append('Precio cerca de banda superior')
+    elif bollinger_pos < -.85:
+        score += .25
+        reasons.append('Precio cerca de banda inferior')
+
+    if volume_ratio >= 1.20 and nonzero_volumes:
         score += .35 if score > 0 else -.35 if score < 0 else 0
-        reasons.append('Volumen por encima de su media')
+        reasons.append('Volumen superior a su media')
 
     atr_pct = (atr / price * 100) if price else 0
-    if atr_pct > 1.4:
-        score *= .88
-        reasons.append('Volatilidad elevada: señal penalizada')
+    if atr_pct > 1.5:
+        score *= .86
+        reasons.append('Volatilidad alta: señal penalizada')
 
-    # Evita presentar como "en vivo" una señal basada en un mercado cerrado o en datos viejos.
     candle_age = max(0, int(time.time()) - int(candles[-1]['time']))
     stale_limit = max(180, int(timeframe) * 180)
     market_fresh = meta['category'] == 'Cripto' or candle_age <= stale_limit
@@ -352,28 +404,29 @@ def analyze_market(asset, timeframe):
     if not market_fresh:
         direction = Signal.Direction.WAIT
         confidence = 45
-        reasons.insert(0, 'Mercado sin vela reciente: esperar reapertura')
+        reasons.insert(0, 'Mercado sin cotización reciente')
     else:
-        if score >= 3.15:
+        if score >= 4.15:
             direction = Signal.Direction.CALL
-        elif score <= -3.15:
+        elif score <= -4.15:
             direction = Signal.Direction.PUT
         else:
             direction = Signal.Direction.WAIT
-
-        confidence = int(max(45, min(89, 49 + abs(score) * 8)))
+        confidence = int(max(45, min(91, 50 + abs(score) * 6.6)))
         if direction == Signal.Direction.WAIT:
-            confidence = min(confidence, 62)
+            confidence = min(confidence, 64)
 
-    if abs(ema9 - ema21) > max(atr * .25, price * .0002) and abs(macd_hist) > 0:
+    quality = 'ALTA' if confidence >= 80 and direction != Signal.Direction.WAIT else 'MEDIA' if confidence >= 68 and direction != Signal.Direction.WAIT else 'EN OBSERVACIÓN'
+
+    if abs(ema9 - ema21) > max(atr * .22, price * .00015) and abs(macd_hist) > 0:
         strategy = 'Tendencia EMA + MACD'
-    elif (rsi >= 52 or rsi <= 48) and abs(momentum) >= .04:
+    elif (rsi >= 53 or rsi <= 47) and abs(momentum3) >= .035:
         strategy = 'Momentum RSI'
     else:
         strategy = 'Confluencia técnica'
 
     risk_pct = .5 if atr_pct >= 1 else .75
-    if confidence >= 78 and atr_pct < .8:
+    if confidence >= 80 and atr_pct < .8:
         risk_pct = 1.0
 
     return {
@@ -384,18 +437,22 @@ def analyze_market(asset, timeframe):
         'direction': direction,
         'score': round(score, 2),
         'confidence': confidence,
+        'quality': quality,
         'price': price,
         'strategy': strategy,
         'rsi': round(rsi, 1),
+        'stochastic': round(stochastic, 1),
+        'bollinger_position': round(bollinger_pos, 2),
         'ema9': ema9,
         'ema21': ema21,
+        'ema50': ema50,
         'macd_hist': macd_hist,
         'atr_pct': round(atr_pct, 3),
         'volume_ratio': round(volume_ratio, 2),
         'risk_pct': risk_pct,
         'market_fresh': market_fresh,
         'last_candle_at': candles[-1]['time'],
-        'reasons': reasons[:5],
+        'reasons': reasons[:6],
         'source': source,
     }
 
@@ -403,19 +460,22 @@ def analyze_market(asset, timeframe):
 def get_or_create_signal(asset, timeframe):
     timeframe = int(timeframe)
     now = timezone.now()
-    active = Signal.objects.filter(
+
+    existing = Signal.objects.filter(
         asset=asset,
         timeframe=timeframe,
         outcome=Signal.Outcome.OPEN,
         expires_at__gt=now,
-    ).exclude(direction=Signal.Direction.WAIT).first()
-    if active:
-        return active, None
+    ).order_by('-generated_at').first()
+    if existing:
+        return existing, None
 
     analysis = analyze_market(asset, timeframe)
     if analysis['direction'] == Signal.Direction.WAIT:
         return None, analysis
 
+    scheduled_entry_at = now + timedelta(seconds=SIGNAL_ENTRY_DELAY_SECONDS)
+    expires_at = scheduled_entry_at + timedelta(minutes=timeframe)
     signal = Signal.objects.create(
         asset=asset,
         timeframe=timeframe,
@@ -424,28 +484,52 @@ def get_or_create_signal(asset, timeframe):
         score=analysis['score'],
         confidence=analysis['confidence'],
         entry_price=Decimal(str(analysis['price'])),
+        scheduled_entry_at=scheduled_entry_at,
         source=analysis['source'],
-        expires_at=now + timedelta(minutes=timeframe),
+        expires_at=expires_at,
     )
     return signal, analysis
 
 
-def evaluate_due_signals(limit=50):
+def process_signal_states(limit=100):
+    now = timezone.now()
+    activated = 0
+    evaluated = 0
+
+    pending = list(
+        Signal.objects.filter(
+            outcome=Signal.Outcome.OPEN,
+            scheduled_entry_at__isnull=False,
+            scheduled_entry_at__lte=now,
+            activated_at__isnull=True,
+        ).order_by('scheduled_entry_at')[:limit]
+    )
+    for signal in pending:
+        try:
+            price, source = _market_price_at(signal.asset, signal.scheduled_entry_at)
+        except MarketDataError:
+            continue
+        signal.execution_entry_price = price
+        signal.activated_at = now
+        if source:
+            signal.source = source
+        signal.save(update_fields=['execution_entry_price', 'activated_at', 'source'])
+        activated += 1
+
     due = list(
         Signal.objects.filter(
             outcome=Signal.Outcome.OPEN,
-            expires_at__lte=timezone.now(),
-        ).exclude(direction=Signal.Direction.WAIT)[:limit]
+            execution_entry_price__isnull=False,
+            expires_at__lte=now,
+        ).order_by('expires_at')[:limit]
     )
-    updated = 0
     for signal in due:
         try:
-            market = fetch_ohlc(signal.asset, signal.timeframe)
-            exit_price = Decimal(str(market['candles'][-1]['close']))
+            exit_price, _ = _market_price_at(signal.asset, signal.expires_at)
         except MarketDataError:
             continue
 
-        entry = signal.entry_price
+        entry = signal.execution_entry_price
         if exit_price == entry:
             outcome = Signal.Outcome.DRAW
         elif signal.direction == Signal.Direction.CALL:
@@ -455,10 +539,15 @@ def evaluate_due_signals(limit=50):
 
         signal.exit_price = exit_price
         signal.outcome = outcome
-        signal.evaluated_at = timezone.now()
+        signal.evaluated_at = now
         signal.save(update_fields=['exit_price', 'outcome', 'evaluated_at'])
-        updated += 1
-    return updated
+        evaluated += 1
+
+    return {'activated': activated, 'evaluated': evaluated}
+
+
+def evaluate_due_signals(limit=50):
+    return process_signal_states(limit=limit)['evaluated']
 
 
 def strategy_leaderboard():
@@ -482,7 +571,17 @@ def strategy_leaderboard():
 
 
 def public_signal_dict(signal, analysis=None):
+    now = timezone.now()
     if signal:
+        if signal.outcome != Signal.Outcome.OPEN:
+            phase = 'closed'
+        elif signal.scheduled_entry_at and now < signal.scheduled_entry_at:
+            phase = 'scheduled'
+        elif signal.execution_entry_price is not None:
+            phase = 'active'
+        else:
+            phase = 'activating'
+
         return {
             'id': signal.id,
             'asset': signal.asset,
@@ -491,12 +590,19 @@ def public_signal_dict(signal, analysis=None):
             'strategy': signal.strategy,
             'confidence': signal.confidence,
             'entry_price': float(signal.entry_price),
+            'execution_entry_price': float(signal.execution_entry_price) if signal.execution_entry_price is not None else None,
             'generated_at': signal.generated_at.isoformat(),
+            'scheduled_entry_at': signal.scheduled_entry_at.isoformat() if signal.scheduled_entry_at else None,
+            'activated_at': signal.activated_at.isoformat() if signal.activated_at else None,
             'expires_at': signal.expires_at.isoformat(),
             'source': signal.source,
             'status': signal.outcome,
+            'phase': phase,
+            'seconds_to_entry': max(0, int((signal.scheduled_entry_at - now).total_seconds())) if signal.scheduled_entry_at else 0,
+            'seconds_to_expiry': max(0, int((signal.expires_at - now).total_seconds())),
             'analysis': analysis or {},
         }
+
     return {
         'id': None,
         'asset': analysis['asset'],
@@ -505,9 +611,15 @@ def public_signal_dict(signal, analysis=None):
         'strategy': analysis['strategy'],
         'confidence': analysis['confidence'],
         'entry_price': analysis['price'],
-        'generated_at': timezone.now().isoformat(),
+        'execution_entry_price': None,
+        'generated_at': now.isoformat(),
+        'scheduled_entry_at': None,
+        'activated_at': None,
         'expires_at': None,
         'source': analysis['source'],
         'status': 'wait',
+        'phase': 'wait',
+        'seconds_to_entry': 0,
+        'seconds_to_expiry': 0,
         'analysis': analysis,
     }
