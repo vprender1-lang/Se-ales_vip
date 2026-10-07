@@ -45,3 +45,32 @@
 .payout-card{padding:22px;border:1px solid rgba(245,196,81,.2);border-radius:22px;background:linear-gradient(145deg,rgba(245,196,81,.09),rgba(9,23,37,.92));box-shadow:var(--shadow)}.payout-card small{display:block;font-size:.62rem;letter-spacing:.12em;color:#b8a36d}.payout-card>strong{display:block;font-family:Manrope;font-size:3.2rem;line-height:1;color:var(--gold);margin:7px 0 4px}.payout-card>span{font-size:.76rem;color:#d1c59c}.payout-card p{margin:13px 0 0;padding-top:12px;border-top:1px solid rgba(245,196,81,.11);font-size:.67rem;color:#7e91a1}
 @media(max-width:900px){.vip-login-wrap{grid-template-columns:1fr;gap:36px}.vip-login-card{justify-self:start}.signal-metrics-5{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:650px){.vip-login-page{padding-top:100px}.vip-login-copy h1{font-size:3.15rem}.quick-guide{grid-template-columns:1fr}.control-footer{grid-template-columns:1fr}.signal-metrics-5{grid-template-columns:repeat(2,1fr)}.risk-output{grid-template-columns:1fr}.risk-output>div+div{border-left:0;border-top:1px solid rgba(245,196,81,.14);padding-left:0;padding-top:10px}.signals-hero-actions{justify-content:flex-start}}
+
+
+/* ===== Catálogo ampliado de activos ===== */
+.asset-toolbar{display:grid;grid-template-columns:minmax(240px,1fr) auto;gap:12px;align-items:center;margin:22px 0 14px}
+.asset-search-wrap{display:flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:13px;background:#071422;padding:0 13px}
+.asset-search-wrap>span{color:var(--gold);font-size:1.1rem}
+.asset-search-wrap input{width:100%;border:0;outline:0;background:transparent;color:#fff;padding:13px 0;font:inherit;font-size:.82rem}
+.asset-search-wrap input::placeholder{color:#62788a}
+.asset-filter-tabs{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.asset-tab{border:1px solid var(--line);background:rgba(255,255,255,.022);color:#8fa4b5;border-radius:999px;padding:9px 12px;font-size:.68rem;font-weight:800;cursor:pointer;transition:.18s}
+.asset-tab:hover,.asset-tab.active{border-color:rgba(245,196,81,.35);color:var(--gold);background:rgba(245,196,81,.065)}
+.asset-browser{max-height:420px;overflow:auto;padding:4px 6px 8px 0;margin-bottom:16px;scrollbar-width:thin;scrollbar-color:rgba(245,196,81,.28) transparent}
+.asset-section{margin-bottom:17px}.asset-section:last-of-type{margin-bottom:0}
+.asset-section-head{display:flex;justify-content:space-between;align-items:center;margin:0 0 8px}
+.asset-section-head h3{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:#a9bbca;margin:0}
+.asset-section-head span{font-size:.61rem;color:#607789}
+.asset-group-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.asset-option{display:grid;grid-template-columns:minmax(0,1fr) 32px;gap:5px}
+.asset-option.hidden,.asset-section.hidden{display:none!important}
+.asset-chip{width:100%;min-width:0;text-align:left;border:1px solid var(--line);background:rgba(255,255,255,.025);color:#bed0df;border-radius:11px;padding:10px 11px;font-weight:800;cursor:pointer;transition:.18s;font-size:.74rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.asset-chip:hover{border-color:rgba(245,196,81,.35);color:#fff}
+.asset-chip.active{border-color:rgba(245,196,81,.58);background:linear-gradient(135deg,rgba(245,196,81,.14),rgba(245,196,81,.035));color:var(--gold);box-shadow:inset 0 0 0 1px rgba(245,196,81,.05)}
+.favorite-btn{border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.018);color:#5f7486;cursor:pointer;font-size:.9rem;transition:.18s}
+.favorite-btn:hover,.favorite-btn.active{color:var(--gold);border-color:rgba(245,196,81,.32);background:rgba(245,196,81,.055)}
+.asset-empty{padding:22px;text-align:center;border:1px dashed var(--line);border-radius:13px;color:#71879a;font-size:.76rem}
+.timeframe-label{margin:12px 0 8px;font-size:.63rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#758b9d}
+.market-source-line{display:flex;align-items:center;gap:8px;margin-top:7px}.market-source-line span{font-size:.66rem;color:#70879a;text-transform:uppercase;letter-spacing:.08em}.market-source-line b{font-size:.72rem;color:#8fb1c9;font-weight:700}
+@media(max-width:900px){.asset-toolbar{grid-template-columns:1fr}.asset-filter-tabs{justify-content:flex-start}.asset-group-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:650px){.asset-group-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.asset-browser{max-height:360px}.asset-filter-tabs{display:grid;grid-template-columns:repeat(2,1fr)}.asset-tab{width:100%}}
