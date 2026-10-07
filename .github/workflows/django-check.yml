@@ -1,4 +1,5 @@
 name: Django checks
+# Verifica migraciones, configuración y archivos estáticos
 
 on:
   push:
