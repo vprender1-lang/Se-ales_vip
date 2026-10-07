@@ -42,10 +42,10 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name='signal',
-            index=models.Index(fields=['asset', 'timeframe', '-generated_at'], name='registro_si_asset_865314_idx'),
+            index=models.Index(fields=['asset', 'timeframe', '-generated_at'], name='registro_si_asset_a02c3e_idx'),
         ),
         migrations.AddIndex(
             model_name='signal',
-            index=models.Index(fields=['outcome', 'expires_at'], name='registro_si_outcome_e0af38_idx'),
+            index=models.Index(fields=['outcome', 'expires_at'], name='registro_si_outcome_7142ef_idx'),
         ),
     ]
