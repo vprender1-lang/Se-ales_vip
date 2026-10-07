@@ -7,8 +7,8 @@
       <span class="section-kicker">ACCESO VALIDADO · ID #{{ registration.quotex_id }}</span>
       <h1 class="signals-title">Motor de <em>señales</em></h1>
       <p class="signals-subtitle">
-        Elige el activo y la duración. Con el modo automático activo, el panel vuelve a analizar el mercado
-        y mantiene la señal vigente sin que tengas que pulsar el botón cada vez.
+        Explora {{ assets|length }} pares Forex y criptomonedas del catálogo público de Quotex,
+        selecciona 1, 5 o 15 minutos y deja el modo automático encendido para mantener la lectura actualizada.
       </p>
     </div>
     <div class="signals-hero-actions">
@@ -26,7 +26,7 @@
         <div class="signal-control-head">
           <div>
             <small>CONFIGURACIÓN</small>
-            <h2>Selecciona moneda y tiempo</h2>
+            <h2>Elige el activo que vas a operar</h2>
           </div>
           <div class="auto-switch-wrap">
             <span>SEÑALES AUTOMÁTICAS</span>
@@ -38,19 +38,52 @@
         </div>
 
         <div class="quick-guide">
-          <div><b>1</b><span>Elige moneda</span></div>
+          <div><b>1</b><span>Busca o selecciona un par</span></div>
           <div><b>2</b><span>Elige 1, 5 o 15 min</span></div>
           <div><b>3</b><span>Espera CALL, PUT o ESPERAR</span></div>
         </div>
 
-        <div class="asset-grid" id="assetGrid">
-          {% for asset in assets %}
-          <button class="asset-chip {% if forloop.first %}active{% endif %}" type="button" data-asset="{{ asset }}">
-            <span>{{ asset }}</span>
-          </button>
-          {% endfor %}
+        <div class="asset-toolbar">
+          <div class="asset-search-wrap">
+            <span>⌕</span>
+            <input id="assetSearch" type="search" autocomplete="off" placeholder="Buscar EUR/USD, BTC/USD, JPY…">
+          </div>
+          <div class="asset-filter-tabs" id="assetTabs">
+            <button type="button" class="asset-tab active" data-filter="all">Todos</button>
+            <button type="button" class="asset-tab" data-filter="forex">Forex</button>
+            <button type="button" class="asset-tab" data-filter="crypto">Cripto</button>
+            <button type="button" class="asset-tab" data-filter="favorites">★ Favoritos</button>
+          </div>
         </div>
 
+        <div class="asset-browser" id="assetGrid">
+          {% for group in asset_groups %}
+          <section class="asset-section" data-section="{{ group.name|lower }}">
+            <div class="asset-section-head">
+              <h3>{{ group.name }}</h3>
+              <span>{{ group.assets|length }} activos</span>
+            </div>
+            <div class="asset-group-grid">
+              {% for asset in group.assets %}
+              <div class="asset-option"
+                   data-asset="{{ asset }}"
+                   data-category="{% if group.name == 'Criptomonedas' %}crypto{% else %}forex{% endif %}"
+                   data-search="{{ asset|lower }}">
+                <button class="asset-chip {% if forloop.parentloop.first and forloop.first %}active{% endif %}"
+                        type="button"
+                        data-asset="{{ asset }}">
+                  <span>{{ asset }}</span>
+                </button>
+                <button class="favorite-btn" type="button" data-favorite="{{ asset }}" aria-label="Marcar {{ asset }} como favorito">☆</button>
+              </div>
+              {% endfor %}
+            </div>
+          </section>
+          {% endfor %}
+          <div id="assetEmpty" class="asset-empty hidden">No encontramos activos con esa búsqueda.</div>
+        </div>
+
+        <div class="timeframe-label">Duración de la señal</div>
         <div class="timeframe-row">
           {% for tf in timeframes %}
           <button class="tf-btn {% if tf == 1 %}active{% endif %}" type="button" data-timeframe="{{ tf }}">
@@ -72,7 +105,7 @@
         <div class="signal-result-top">
           <div>
             <small>SEÑAL ACTUAL</small>
-            <h2 id="signalAsset">BTC/USD · 1 min</h2>
+            <h2 id="signalAsset">{{ assets.0 }} · 1 min</h2>
           </div>
           <span id="signalState" class="signal-state wait">ANALIZANDO</span>
         </div>
@@ -86,6 +119,10 @@
             <div class="expiry-line">
               <span>Vigencia</span>
               <b id="signalExpiry">—</b>
+            </div>
+            <div class="market-source-line">
+              <span>Fuente</span>
+              <b id="marketSource">—</b>
             </div>
           </div>
         </div>
@@ -153,7 +190,7 @@
         <small>PAYOUT DE REFERENCIA</small>
         <strong>{{ reference_payout }}%</strong>
         <span>retorno potencial por operación ganadora</span>
-        <p>No significa que el motor tenga {{ reference_payout }}% de rentabilidad ni que el broker pague siempre ese porcentaje.</p>
+        <p>No significa que el motor tenga {{ reference_payout }}% de rentabilidad ni que Quotex pague siempre ese porcentaje.</p>
       </div>
 
       <div class="stats-card">
@@ -233,12 +270,12 @@
   <section class="container transparency-card">
     <div>
       <span class="section-kicker">TRANSPARENCIA</span>
-      <h3>Cómo interpretar las señales</h3>
+      <h3>Quotex vs. fuente de mercado</h3>
     </div>
     <p>
-      Los precios provienen de Kraken y pueden diferir de Quotex. CALL/PUT expresa una dirección técnica;
-      no es una promesa de beneficio. El {{ reference_payout }}% es únicamente una referencia de payout para
-      la calculadora de riesgo. La precisión histórica se calcula aparte usando las señales cerradas por el motor.
+      El catálogo replica pares Forex y criptomonedas publicados por Quotex, pero las señales usan fuentes externas de mercado.
+      La cotización exacta de Quotex puede diferir. Los activos OTC no se presentan como señales “reales” porque su precio puede ser
+      específico de la plataforma y no es correcto sustituirlo por una cotización externa.
     </p>
   </section>
 </main>
@@ -254,6 +291,8 @@
   let autoTimer = null;
   let signalExpiryMs = null;
   let signalExpiryTimer = null;
+  let currentFilter = 'all';
+  let favorites = new Set(JSON.parse(localStorage.getItem('vipAssetFavorites') || '[]'));
 
   const apiBase = "{% url 'registro:signal_api' %}";
   const supportUrl = "{% url 'registro:support_api' %}";
@@ -265,8 +304,91 @@
     const n = Number(value);
     if (!Number.isFinite(n)) return '—';
     return n >= 1000 ? n.toLocaleString(undefined, {maximumFractionDigits:2}) :
-           n >= 1 ? n.toFixed(4) : n.toFixed(6);
+           n >= 1 ? n.toFixed(5) : n.toFixed(7);
   };
+
+  function refreshFavoriteButtons() {
+    document.querySelectorAll('.favorite-btn').forEach(btn => {
+      const active = favorites.has(btn.dataset.favorite);
+      btn.textContent = active ? '★' : '☆';
+      btn.classList.toggle('active', active);
+    });
+  }
+
+  function applyAssetFilter() {
+    const query = $('assetSearch').value.trim().toLowerCase();
+    let visibleTotal = 0;
+
+    document.querySelectorAll('.asset-section').forEach(section => {
+      let sectionVisible = 0;
+      section.querySelectorAll('.asset-option').forEach(option => {
+        const asset = option.dataset.asset;
+        const category = option.dataset.category;
+        const search = option.dataset.search;
+        const filterMatch =
+          currentFilter === 'all' ||
+          currentFilter === category ||
+          (currentFilter === 'favorites' && favorites.has(asset));
+        const searchMatch = !query || search.includes(query);
+        const visible = filterMatch && searchMatch;
+        option.classList.toggle('hidden', !visible);
+        if (visible) {
+          sectionVisible += 1;
+          visibleTotal += 1;
+        }
+      });
+      section.classList.toggle('hidden', sectionVisible === 0);
+    });
+
+    $('assetEmpty').classList.toggle('hidden', visibleTotal > 0);
+  }
+
+  document.querySelectorAll('.favorite-btn').forEach(btn => {
+    btn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const asset = btn.dataset.favorite;
+      if (favorites.has(asset)) favorites.delete(asset); else favorites.add(asset);
+      localStorage.setItem('vipAssetFavorites', JSON.stringify([...favorites]));
+      refreshFavoriteButtons();
+      applyAssetFilter();
+    });
+  });
+
+  document.querySelectorAll('.asset-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.asset-tab').forEach(x => x.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter;
+      applyAssetFilter();
+    });
+  });
+
+  $('assetSearch').addEventListener('input', applyAssetFilter);
+
+  function selectAsset(asset) {
+    selectedAsset = asset;
+    document.querySelectorAll('.asset-chip').forEach(x => {
+      x.classList.toggle('active', x.dataset.asset === asset);
+    });
+    signalExpiryMs = null;
+    resetAutoCountdown();
+    if (autoEnabled) analyze(true);
+  }
+
+  document.querySelectorAll('.asset-chip').forEach(btn => {
+    btn.addEventListener('click', () => selectAsset(btn.dataset.asset));
+  });
+
+  document.querySelectorAll('.tf-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tf-btn').forEach(x => x.classList.remove('active'));
+      btn.classList.add('active');
+      selectedTimeframe = Number(btn.dataset.timeframe);
+      signalExpiryMs = null;
+      resetAutoCountdown();
+      if (autoEnabled) analyze(true);
+    });
+  });
 
   function resetAutoCountdown() {
     autoSeconds = 15;
@@ -312,28 +434,6 @@
     signalExpiryTimer = setInterval(updateExpiryClock, 1000);
   }
 
-  document.querySelectorAll('.asset-chip').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.asset-chip').forEach(x => x.classList.remove('active'));
-      btn.classList.add('active');
-      selectedAsset = btn.dataset.asset;
-      signalExpiryMs = null;
-      resetAutoCountdown();
-      if (autoEnabled) analyze(true);
-    });
-  });
-
-  document.querySelectorAll('.tf-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.tf-btn').forEach(x => x.classList.remove('active'));
-      btn.classList.add('active');
-      selectedTimeframe = Number(btn.dataset.timeframe);
-      signalExpiryMs = null;
-      resetAutoCountdown();
-      if (autoEnabled) analyze(true);
-    });
-  });
-
   $('autoMode').addEventListener('change', (event) => {
     autoEnabled = event.target.checked;
     resetAutoCountdown();
@@ -374,6 +474,7 @@
       $('signalConfidence').textContent = s.confidence + '/100';
       $('signalStrategy').textContent = s.strategy;
       $('signalNotice').textContent = data.notice;
+      $('marketSource').textContent = s.source || a.source || 'Fuente pública';
       setSignalExpiry(s.expires_at);
 
       const directionEl = $('signalDirection');
@@ -391,7 +492,7 @@
       } else {
         directionEl.textContent = 'ESPERAR';
         directionEl.className = 'signal-direction wait';
-        stateEl.textContent = 'SIN ENTRADA';
+        stateEl.textContent = a.market_fresh === false ? 'MERCADO CERRADO' : 'SIN ENTRADA';
         stateEl.className = 'signal-state wait';
       }
 
@@ -402,11 +503,12 @@
 
       resetAutoCountdown();
     } catch (err) {
-      $('signalState').textContent = 'ERROR';
+      $('signalState').textContent = 'SIN DATOS';
       $('signalState').className = 'signal-state put';
       $('signalDirection').textContent = '—';
       $('signalDirection').className = 'signal-direction wait';
       $('signalStrategy').textContent = err.message;
+      $('marketSource').textContent = 'No disponible';
       setSignalExpiry(null);
     } finally {
       button.disabled = false;
@@ -492,6 +594,8 @@
     }
   });
 
+  refreshFavoriteButtons();
+  applyAssetFilter();
   setInterval(refreshSupport, 5000);
   refreshSupport();
   startAutoTimer();
