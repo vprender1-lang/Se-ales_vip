@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 import re
+import random
 
 from django.conf import settings
 from django.contrib import messages
@@ -198,6 +199,28 @@ def legacy_signals_dashboard(request, public_id):
     return redirect('registro:signals_dashboard')
 
 
+def daily_trader_profiles():
+    """Tres perfiles visuales que rotan a diario; sus métricas provienen solo del historial real."""
+    strategies = ['Tendencia EMA + MACD', 'Momentum RSI', 'Confluencia técnica']
+    pool = ['Atlas', 'Nova', 'Orion', 'Vega', 'Nexo', 'Pulse', 'Zenith', 'Delta', 'Ares']
+    rng = random.Random(timezone.localdate().isoformat())
+    names = rng.sample(pool, 3)
+    stats = {row['strategy']: row for row in strategy_leaderboard()}
+    profiles = []
+    for index, strategy in enumerate(strategies):
+        row = stats.get(strategy, {})
+        profiles.append({
+            'name': f"Trader {names[index]}",
+            'strategy': strategy,
+            'accuracy': row.get('accuracy') if row.get('total') else None,
+            'total': row.get('total', 0),
+            'wins': row.get('wins', 0),
+            'label': 'DATOS MEDIDOS' if row.get('total') else 'EN OBSERVACIÓN',
+        })
+    rng.shuffle(profiles)
+    return profiles
+
+
 def signals_dashboard(request):
     registration = current_vip_registration(request)
     if not registration:
@@ -226,6 +249,7 @@ def signals_dashboard(request):
         'asset_groups': grouped_assets(),
         'timeframes': TIMEFRAMES,
         'leaderboard': strategy_leaderboard(),
+        'daily_traders': daily_trader_profiles(),
         'summary': summary,
         'support_messages': registration.support_messages.all()[:80],
         'reference_payout': settings.SIGNAL_REFERENCE_PAYOUT,
@@ -261,11 +285,69 @@ def signal_api(request):
         'signal': public_signal_dict(signal, analysis),
         'reference_payout': settings.SIGNAL_REFERENCE_PAYOUT,
         'notice': (
-            'Señal técnica basada en datos públicos de Kraken. No es la cotización de Quotex '
-            'ni garantiza resultados. La confianza es una puntuación heurística, no una probabilidad. '
+            'Señal técnica basada en fuentes públicas externas. No es la cotización exacta de Quotex '
+            'ni garantiza resultados. La puntuación de confluencia es heurística, no una probabilidad. '
             f'El {settings.SIGNAL_REFERENCE_PAYOUT}% mostrado es un payout de referencia por operación ganadora, '
             'no una rentabilidad histórica garantizada.'
         ),
+    })
+
+
+@require_http_methods(['GET'])
+def signal_history_api(request):
+    registration = current_vip_registration(request)
+    if not registration:
+        return JsonResponse({'ok': False, 'error': 'Sesión VIP expirada.'}, status=401)
+
+    try:
+        evaluate_due_signals(limit=50)
+    except Exception:
+        pass
+
+    asset = (request.GET.get('asset') or '').strip()
+    try:
+        timeframe = int(request.GET.get('timeframe', '0') or 0)
+    except ValueError:
+        timeframe = 0
+
+    qs = Signal.objects.all()
+    if asset in ASSETS:
+        qs = qs.filter(asset=asset)
+    if timeframe in TIMEFRAMES:
+        qs = qs.filter(timeframe=timeframe)
+
+    recent = list(qs.order_by('-generated_at')[:10])
+    now = timezone.now()
+    items = []
+    for signal in recent:
+        remaining = max(0, int((signal.expires_at - now).total_seconds()))
+        items.append({
+            'id': signal.id,
+            'asset': signal.asset,
+            'timeframe': signal.timeframe,
+            'direction': signal.direction,
+            'strategy': signal.strategy,
+            'confidence': signal.confidence,
+            'entry_price': float(signal.entry_price),
+            'exit_price': float(signal.exit_price) if signal.exit_price is not None else None,
+            'outcome': signal.outcome,
+            'outcome_label': signal.get_outcome_display(),
+            'generated_at': signal.generated_at.isoformat(),
+            'expires_at': signal.expires_at.isoformat(),
+            'evaluated_at': signal.evaluated_at.isoformat() if signal.evaluated_at else None,
+            'remaining_seconds': remaining,
+        })
+
+    closed = [item for item in items if item['outcome'] in {'win', 'loss', 'draw'}]
+    decided = [item for item in closed if item['outcome'] in {'win', 'loss'}]
+    wins = sum(1 for item in decided if item['outcome'] == 'win')
+    accuracy = round((wins / len(decided) * 100), 1) if decided else None
+
+    return JsonResponse({
+        'ok': True,
+        'signals': items,
+        'recent_accuracy': accuracy,
+        'closed_count': len(closed),
     })
 
 
