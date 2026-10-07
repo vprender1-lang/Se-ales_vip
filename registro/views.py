@@ -1,9 +1,11 @@
 import hashlib
 import hmac
 import json
+import re
 
 from django.conf import settings
 from django.contrib import messages
+from django.db.models import Count, Q
 from django.http import JsonResponse, Http404, HttpResponseForbidden, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -11,11 +13,22 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_POST
 
 from .forms import RegistrationForm
-from .models import Registration
+from .models import Registration, Signal, SupportMessage
+from .signal_engine import (
+    ASSETS,
+    TIMEFRAMES,
+    MarketDataError,
+    evaluate_due_signals,
+    get_or_create_signal,
+    public_signal_dict,
+    strategy_leaderboard,
+)
 from .telegram import (
     answer_callback_query,
     notify_admin,
+    notify_support_message,
     refresh_admin_message,
+    send_support_admin_confirmation,
 )
 
 
@@ -31,6 +44,14 @@ def common_context():
         'telegram_admin_username': settings.TELEGRAM_ADMIN_USERNAME,
         'quotex_partner_bot_url': settings.QUOTEX_PARTNER_BOT_URL,
     }
+
+
+def approved_registration(public_id):
+    return get_object_or_404(
+        Registration,
+        public_id=public_id,
+        status=Registration.Status.APPROVED,
+    )
 
 
 @require_http_methods(['GET', 'POST'])
@@ -86,6 +107,108 @@ def status_json(request, public_id):
         'status_label': registration.get_status_display(),
         'updated_at': registration.updated_at.isoformat(),
         'vip_url': settings.TELEGRAM_VIP_URL if registration.status == Registration.Status.APPROVED else '',
+        'signals_url': (
+            f'/senales/{registration.public_id}/'
+            if registration.status == Registration.Status.APPROVED else ''
+        ),
+    })
+
+
+def signals_dashboard(request, public_id):
+    registration = approved_registration(public_id)
+    try:
+        evaluate_due_signals(limit=12)
+    except Exception:
+        pass
+
+    closed = Signal.objects.exclude(outcome=Signal.Outcome.OPEN)
+    summary = closed.aggregate(
+        total=Count('id'),
+        wins=Count('id', filter=Q(outcome=Signal.Outcome.WIN)),
+        losses=Count('id', filter=Q(outcome=Signal.Outcome.LOSS)),
+        draws=Count('id', filter=Q(outcome=Signal.Outcome.DRAW)),
+    )
+    decided = (summary.get('wins') or 0) + (summary.get('losses') or 0)
+    summary['accuracy'] = round(((summary.get('wins') or 0) / decided * 100), 1) if decided else None
+
+    context = common_context()
+    context.update({
+        'registration': registration,
+        'assets': list(ASSETS.keys()),
+        'timeframes': TIMEFRAMES,
+        'leaderboard': strategy_leaderboard(),
+        'summary': summary,
+        'support_messages': registration.support_messages.all()[:80],
+    })
+    return render(request, 'registro/signals.html', context)
+
+
+@require_http_methods(['GET'])
+def signal_api(request, public_id):
+    approved_registration(public_id)
+    asset = request.GET.get('asset', 'BTC/USD')
+    try:
+        timeframe = int(request.GET.get('timeframe', '1'))
+    except ValueError:
+        return JsonResponse({'ok': False, 'error': 'Temporalidad inválida.'}, status=400)
+
+    if asset not in ASSETS or timeframe not in TIMEFRAMES:
+        return JsonResponse({'ok': False, 'error': 'Activo o temporalidad no soportados.'}, status=400)
+
+    try:
+        evaluate_due_signals(limit=8)
+        signal, analysis = get_or_create_signal(asset, timeframe)
+    except MarketDataError as exc:
+        return JsonResponse({'ok': False, 'error': str(exc)}, status=503)
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'No fue posible calcular la señal en este momento.'}, status=503)
+
+    return JsonResponse({
+        'ok': True,
+        'signal': public_signal_dict(signal, analysis),
+        'notice': (
+            'Señal técnica basada en datos públicos de Kraken. No es la cotización de Quotex '
+            'ni garantiza resultados. La confianza es una puntuación heurística, no una probabilidad.'
+        ),
+    })
+
+
+@require_http_methods(['GET', 'POST'])
+def support_api(request, public_id):
+    registration = approved_registration(public_id)
+
+    if request.method == 'GET':
+        data = [{
+            'sender': item.sender,
+            'text': item.text,
+            'created_at': item.created_at.isoformat(),
+        } for item in registration.support_messages.all()[:120]]
+        return JsonResponse({'ok': True, 'messages': data})
+
+    text = (request.POST.get('message') or '').strip()
+    if not text:
+        return JsonResponse({'ok': False, 'error': 'Escribe un mensaje.'}, status=400)
+    if len(text) > 1200:
+        return JsonResponse({'ok': False, 'error': 'El mensaje es demasiado largo.'}, status=400)
+
+    # Antispam simple: evita ráfagas desde una misma solicitud.
+    last = registration.support_messages.filter(sender=SupportMessage.Sender.USER).order_by('-created_at').first()
+    if last and (timezone.now() - last.created_at).total_seconds() < 3:
+        return JsonResponse({'ok': False, 'error': 'Espera unos segundos antes de enviar otro mensaje.'}, status=429)
+
+    item = SupportMessage.objects.create(
+        registration=registration,
+        sender=SupportMessage.Sender.USER,
+        text=text,
+    )
+    notify_support_message(registration, item)
+    return JsonResponse({
+        'ok': True,
+        'message': {
+            'sender': item.sender,
+            'text': item.text,
+            'created_at': item.created_at.isoformat(),
+        },
     })
 
 
@@ -116,10 +239,39 @@ def admin_review(request, public_id, action):
     })
 
 
+def _support_reply_from_telegram(message, chat_id):
+    """Si el admin responde a una notificación de soporte, refleja la respuesta en la web."""
+    reply_to = message.get('reply_to_message') or {}
+    original_text = reply_to.get('text') or ''
+    match = re.search(r'CHAT-ID:\s*([0-9a-fA-F-]{36})', original_text)
+    text = (message.get('text') or '').strip()
+    if not match or not text or text.startswith('/start'):
+        return False
+
+    try:
+        registration = Registration.objects.get(
+            public_id=match.group(1),
+            status=Registration.Status.APPROVED,
+        )
+    except (Registration.DoesNotExist, ValueError):
+        return False
+
+    SupportMessage.objects.create(
+        registration=registration,
+        sender=SupportMessage.Sender.ADMIN,
+        text=text[:1200],
+    )
+    send_support_admin_confirmation(
+        chat_id,
+        f'✅ Respuesta enviada a @{registration.telegram_username} en el chat web.',
+    )
+    return True
+
+
 @csrf_exempt
 @require_POST
 def telegram_webhook(request):
-    """Recibe los botones Aprobar/Rechazar pulsados en TU bot de Telegram."""
+    """Recibe validaciones y respuestas de soporte desde TU bot de Telegram."""
     secret = settings.TELEGRAM_WEBHOOK_SECRET
     supplied = request.headers.get('X-Telegram-Bot-Api-Secret-Token', '')
     if not secret or not hmac.compare_digest(secret, supplied):
@@ -130,6 +282,16 @@ def telegram_webhook(request):
     except (UnicodeDecodeError, json.JSONDecodeError):
         return HttpResponseBadRequest('JSON inválido.')
 
+    expected_chat_id = str(settings.TELEGRAM_ADMIN_CHAT_ID)
+
+    incoming_message = update.get('message')
+    if incoming_message:
+        chat = incoming_message.get('chat') or {}
+        chat_id = str(chat.get('id', ''))
+        if expected_chat_id and chat_id == expected_chat_id:
+            _support_reply_from_telegram(incoming_message, chat_id)
+        return JsonResponse({'ok': True})
+
     callback = update.get('callback_query')
     if not callback:
         return JsonResponse({'ok': True})
@@ -137,7 +299,6 @@ def telegram_webhook(request):
     message = callback.get('message') or {}
     chat = message.get('chat') or {}
     chat_id = str(chat.get('id', ''))
-    expected_chat_id = str(settings.TELEGRAM_ADMIN_CHAT_ID)
 
     # Solo TU chat puede cambiar el estado de una solicitud.
     if not expected_chat_id or chat_id != expected_chat_id:
