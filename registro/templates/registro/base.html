@@ -23,7 +23,7 @@
       </a>
       <div class="nav-actions">
         <a class="nav-link" href="{% url 'registro:home' %}#como-funciona">Cómo funciona</a>
-        <a class="btn btn-small btn-outline" href="{{ quotex_login_url|default:'#' }}" target="_blank" rel="noopener noreferrer">Iniciar sesión</a>
+        <a class="btn btn-small btn-outline" href="{% url 'registro:vip_login' %}">Iniciar sesión</a>
       </div>
     </nav>
   </header>
