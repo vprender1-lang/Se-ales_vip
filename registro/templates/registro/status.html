@@ -15,7 +15,7 @@
           <small>ESTADO ACTUAL</small>
           <h3 id="statusTitle">{% if registration.status == 'approved' %}¡Solicitud aprobada!{% elif registration.status == 'rejected' %}Solicitud no validada{% else %}Pendiente de validación{% endif %}</h3>
           <p id="statusText">{% if registration.status == 'approved' %}Tu ID fue aprobado por el administrador.{% elif registration.status == 'rejected' %}No se pudo confirmar tu registro. Revisa tu ID y el enlace utilizado.{% else %}Tu ID ya fue enviado al administrador por Telegram. Esta página actualizará el estado automáticamente cuando termine la validación.{% endif %}</p>
-          {% if registration.status == 'approved' %}<a id="signalsBtn" class="btn btn-primary" href="{% url 'registro:signals_dashboard' registration.public_id %}">Abrir motor de señales →</a>{% else %}<a id="signalsBtn" class="btn btn-primary hidden" href="#">Abrir motor de señales →</a>{% endif %}
+          {% if registration.status == 'approved' %}<a id="signalsBtn" class="btn btn-primary" href="{% url 'registro:vip_login' %}?id={{ registration.quotex_id }}">Iniciar sesión con mi ID →</a>{% else %}<a id="signalsBtn" class="btn btn-primary hidden" href="#">Iniciar sesión con mi ID →</a>{% endif %}
           {% if telegram_vip_url and registration.status == 'approved' %}<a id="vipBtn" class="btn btn-ghost" href="{{ telegram_vip_url }}" target="_blank" rel="noopener noreferrer">Entrar al VIP de Telegram ↗</a>{% else %}<a id="vipBtn" class="btn btn-ghost hidden" href="#" target="_blank" rel="noopener noreferrer">Entrar al VIP de Telegram ↗</a>{% endif %}
         </div>
       </div>
