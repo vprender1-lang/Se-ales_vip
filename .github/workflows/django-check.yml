@@ -29,6 +29,10 @@ jobs:
         env:
           DJANGO_DEBUG: "1"
         run: python manage.py migrate --noinput
+      - name: Run test suite
+        env:
+          DJANGO_DEBUG: "1"
+        run: python manage.py test
       - name: Collect static files
         env:
           DJANGO_DEBUG: "1"
