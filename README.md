@@ -175,3 +175,54 @@ Usa una `DJANGO_SECRET_KEY`, `TELEGRAM_WEBHOOK_SECRET`, `ADMIN_REVIEW_SECRET` e 
 - Solo el chat administrador `7306800842` puede ejecutar los callbacks de aprobar/rechazar.
 - El ID de Quotex se trata como identificador; nunca se piden credenciales de la cuenta.
 - `.env` está excluido de Git mediante `.gitignore`.
+
+
+## Motor de señales VIP
+
+Después de aprobar una solicitud, el usuario recibe acceso a:
+
+- Panel privado vinculado al UUID de su solicitud aprobada.
+- Señales técnicas para 1, 5 y 15 minutos.
+- Activos iniciales: BTC/USD, ETH/USD, SOL/USD, XRP/USD y LTC/USD.
+- Fuente de mercado pública: Kraken.
+- Confluencia con EMA 9/21, RSI 14, MACD, momentum, volumen y ATR.
+- Puntuación heurística de confianza (no es una probabilidad garantizada).
+- Gestión de riesgo con calculadora de exposición y límite máximo de 2%.
+- Historial de señales cerradas y precisión direccional.
+- Ranking basado únicamente en resultados medidos; no se generan ganancias ni traders falsos.
+- Chat de soporte web conectado a tu Telegram.
+
+### Chat de soporte por Telegram
+
+Cuando un usuario aprobado escribe en el chat del panel:
+
+1. El mensaje se guarda en Django.
+2. Tu bot te envía el mensaje a `TELEGRAM_ADMIN_CHAT_ID=7306800842`.
+3. En Telegram, usa **Responder** sobre ese mensaje y escribe tu respuesta.
+4. El webhook guarda tu respuesta como administrador.
+5. El panel del usuario la muestra automáticamente.
+
+Para recibir también mensajes (además de los botones Aprobar/Rechazar), vuelve a registrar el webhook después de desplegar:
+
+```bash
+python manage.py telegram_set_webhook
+```
+
+`start.sh` intenta ejecutar este comando automáticamente en cada despliegue si el token, la URL pública y el secreto están configurados.
+
+### Variables necesarias en Render
+
+```env
+TELEGRAM_BOT_TOKEN=TOKEN_REAL_DE_BOTFATHER
+TELEGRAM_ADMIN_CHAT_ID=7306800842
+TELEGRAM_WEBHOOK_SECRET=UNA_CLAVE_LARGA_Y_ALEATORIA
+TELEGRAM_VIP_URL=https://t.me/+TU_INVITACION_PRIVADA
+```
+
+En Render, `PUBLIC_URL` se puede omitir porque la aplicación toma `RENDER_EXTERNAL_HOSTNAME` automáticamente.
+
+### Nota sobre Quotex y datos de mercado
+
+El motor no necesita la contraseña de Quotex. Las señales actuales se calculan con datos públicos de Kraken, por lo que la cotización puede diferir de la mostrada por Quotex. La precisión almacenada es una medición direccional del motor, no una garantía de rentabilidad ni una reproducción del P&L del broker.
+
+Existe software de terceros que intenta conectarse a Quotex mediante APIs no oficiales, pero esta aplicación no guarda credenciales del broker ni depende de ellas para funcionar.
