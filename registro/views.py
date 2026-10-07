@@ -22,6 +22,7 @@ from .signal_engine import (
     MarketDataError,
     evaluate_due_signals,
     get_or_create_signal,
+    process_signal_states,
     grouped_assets,
     public_signal_dict,
     strategy_leaderboard,
@@ -228,7 +229,7 @@ def signals_dashboard(request):
         return redirect('registro:vip_login')
 
     try:
-        evaluate_due_signals(limit=12)
+        process_signal_states(limit=24)
     except Exception:
         pass
 
@@ -273,7 +274,7 @@ def signal_api(request):
         return JsonResponse({'ok': False, 'error': 'Activo o temporalidad no soportados.'}, status=400)
 
     try:
-        evaluate_due_signals(limit=8)
+        process_signal_states(limit=24)
         signal, analysis = get_or_create_signal(asset, timeframe)
     except MarketDataError as exc:
         return JsonResponse({'ok': False, 'error': str(exc)}, status=503)
@@ -285,10 +286,10 @@ def signal_api(request):
         'signal': public_signal_dict(signal, analysis),
         'reference_payout': settings.SIGNAL_REFERENCE_PAYOUT,
         'notice': (
-            'Señal técnica basada en fuentes públicas externas. No es la cotización exacta de Quotex '
-            'ni garantiza resultados. La puntuación de confluencia es heurística, no una probabilidad. '
-            f'El {settings.SIGNAL_REFERENCE_PAYOUT}% mostrado es un payout de referencia por operación ganadora, '
-            'no una rentabilidad histórica garantizada.'
+            'La señal se emite ahora y su entrada queda programada 60 segundos después. '
+            'El precio de ejecución se captura al comenzar la señal y el resultado se mide al vencer. '
+            'Las cotizaciones vienen de fuentes públicas externas y pueden diferir de Quotex. '
+            f'El {settings.SIGNAL_REFERENCE_PAYOUT}% es payout de referencia, no una rentabilidad garantizada.'
         ),
     })
 
@@ -300,7 +301,7 @@ def signal_history_api(request):
         return JsonResponse({'ok': False, 'error': 'Sesión VIP expirada.'}, status=401)
 
     try:
-        evaluate_due_signals(limit=50)
+        process_signal_states(limit=100)
     except Exception:
         pass
 
@@ -329,13 +330,22 @@ def signal_history_api(request):
             'strategy': signal.strategy,
             'confidence': signal.confidence,
             'entry_price': float(signal.entry_price),
+            'execution_entry_price': float(signal.execution_entry_price) if signal.execution_entry_price is not None else None,
             'exit_price': float(signal.exit_price) if signal.exit_price is not None else None,
             'outcome': signal.outcome,
             'outcome_label': signal.get_outcome_display(),
             'generated_at': signal.generated_at.isoformat(),
+            'scheduled_entry_at': signal.scheduled_entry_at.isoformat() if signal.scheduled_entry_at else None,
+            'activated_at': signal.activated_at.isoformat() if signal.activated_at else None,
             'expires_at': signal.expires_at.isoformat(),
             'evaluated_at': signal.evaluated_at.isoformat() if signal.evaluated_at else None,
             'remaining_seconds': remaining,
+            'phase': (
+                'closed' if signal.outcome != Signal.Outcome.OPEN
+                else 'scheduled' if signal.scheduled_entry_at and now < signal.scheduled_entry_at
+                else 'active' if signal.execution_entry_price is not None
+                else 'activating'
+            ),
         })
 
     closed = [item for item in items if item['outcome'] in {'win', 'loss', 'draw'}]
