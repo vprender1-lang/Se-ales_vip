@@ -105,7 +105,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Sitio / afiliación
 AFFILIATE_URL = os.getenv('AFFILIATE_URL', 'https://broker-qx.pro/sign-up/?lid=2343139')
-QUOTEX_LOGIN_URL = os.getenv('QUOTEX_LOGIN_URL', 'https://qxbroker.com/es/sign-in/')
+QUOTEX_LOGIN_URL = os.getenv('QUOTEX_LOGIN_URL', 'https://broker-qx.pro/sign-up/?lid=2343139')
 TELEGRAM_ADMIN_USERNAME = os.getenv('TELEGRAM_ADMIN_USERNAME', '').lstrip('@')
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
 TELEGRAM_ADMIN_CHAT_ID = os.getenv('TELEGRAM_ADMIN_CHAT_ID', '7306800842')
