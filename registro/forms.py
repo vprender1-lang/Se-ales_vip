@@ -38,3 +38,23 @@ class RegistrationForm(forms.ModelForm):
         if cleaned.get('website'):
             raise forms.ValidationError('Solicitud inválida.')
         return cleaned
+
+
+class VipAccessForm(forms.Form):
+    quotex_id = forms.CharField(
+        label='ID de Quotex',
+        min_length=5,
+        max_length=20,
+        widget=forms.TextInput(attrs={
+            'inputmode': 'numeric',
+            'autocomplete': 'off',
+            'placeholder': 'Ingresa tu ID aprobado',
+            'maxlength': '20',
+        }),
+    )
+
+    def clean_quotex_id(self):
+        value = self.cleaned_data['quotex_id'].strip()
+        if not re.fullmatch(r'\d{5,20}', value):
+            raise forms.ValidationError('Escribe un ID de Quotex válido usando solo números.')
+        return value
