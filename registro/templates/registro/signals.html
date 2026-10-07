@@ -7,11 +7,17 @@
       <span class="section-kicker">ACCESO VALIDADO · ID #{{ registration.quotex_id }}</span>
       <h1 class="signals-title">Motor de <em>señales</em></h1>
       <p class="signals-subtitle">
-        Análisis técnico en tiempo real con datos públicos de mercado. El sistema no ejecuta operaciones,
-        no usa martingala y no garantiza ganancias.
+        Elige el activo y la duración. Con el modo automático activo, el panel vuelve a analizar el mercado
+        y mantiene la señal vigente sin que tengas que pulsar el botón cada vez.
       </p>
     </div>
-    <div class="live-badge"><span></span> MOTOR ACTIVO</div>
+    <div class="signals-hero-actions">
+      <div class="live-badge"><span></span> MOTOR ACTIVO</div>
+      <form method="post" action="{% url 'registro:vip_logout' %}">
+        {% csrf_token %}
+        <button class="btn btn-small btn-ghost" type="submit">Cerrar sesión</button>
+      </form>
+    </div>
   </section>
 
   <section class="container signal-layout">
@@ -20,9 +26,21 @@
         <div class="signal-control-head">
           <div>
             <small>CONFIGURACIÓN</small>
-            <h2>Selecciona activo y duración</h2>
+            <h2>Selecciona moneda y tiempo</h2>
           </div>
-          <span class="data-source">Fuente: Kraken</span>
+          <div class="auto-switch-wrap">
+            <span>SEÑALES AUTOMÁTICAS</span>
+            <label class="auto-switch">
+              <input id="autoMode" type="checkbox" checked>
+              <span class="auto-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="quick-guide">
+          <div><b>1</b><span>Elige moneda</span></div>
+          <div><b>2</b><span>Elige 1, 5 o 15 min</span></div>
+          <div><b>3</b><span>Espera CALL, PUT o ESPERAR</span></div>
         </div>
 
         <div class="asset-grid" id="assetGrid">
@@ -41,9 +59,13 @@
           {% endfor %}
         </div>
 
-        <button id="analyzeBtn" class="btn btn-primary btn-full signal-cta" type="button">
-          Analizar mercado ahora
-        </button>
+        <div class="control-footer">
+          <button id="analyzeBtn" class="btn btn-primary signal-cta" type="button">Generar señal ahora</button>
+          <div class="auto-status">
+            <small>PRÓXIMA ACTUALIZACIÓN</small>
+            <strong id="autoCountdown">15 s</strong>
+          </div>
+        </div>
       </div>
 
       <div class="signal-result-card" id="signalResult">
@@ -52,30 +74,35 @@
             <small>SEÑAL ACTUAL</small>
             <h2 id="signalAsset">BTC/USD · 1 min</h2>
           </div>
-          <span id="signalState" class="signal-state wait">ESPERANDO</span>
+          <span id="signalState" class="signal-state wait">ANALIZANDO</span>
         </div>
 
         <div class="signal-direction-wrap">
           <div id="signalDirection" class="signal-direction wait">—</div>
-          <div>
+          <div class="signal-main-data">
             <small>PUNTUACIÓN DE CONFLUENCIA</small>
             <strong id="signalConfidence">—</strong>
-            <p id="signalStrategy">Selecciona una configuración y analiza.</p>
+            <p id="signalStrategy">Buscando una configuración técnica válida…</p>
+            <div class="expiry-line">
+              <span>Vigencia</span>
+              <b id="signalExpiry">—</b>
+            </div>
           </div>
         </div>
 
-        <div class="signal-metrics-grid">
+        <div class="signal-metrics-grid signal-metrics-5">
           <div><small>PRECIO REFERENCIA</small><strong id="entryPrice">—</strong></div>
           <div><small>RSI 14</small><strong id="rsiValue">—</strong></div>
           <div><small>VOLATILIDAD ATR</small><strong id="atrValue">—</strong></div>
           <div><small>RIESGO SUGERIDO</small><strong id="riskValue">0.5%–1%</strong></div>
+          <div class="payout-metric"><small>PAYOUT DE REFERENCIA</small><strong>{{ reference_payout }}%</strong></div>
         </div>
 
         <div id="signalReasons" class="signal-reasons">
           <span>El motor mostrará aquí las confluencias técnicas detectadas.</span>
         </div>
         <div class="signal-notice" id="signalNotice">
-          La puntuación de confianza es heurística y no representa una probabilidad garantizada de ganar.
+          El {{ reference_payout }}% es un retorno potencial de referencia si una operación gana; no es una rentabilidad histórica ni una garantía.
         </div>
       </div>
 
@@ -83,7 +110,10 @@
         <div>
           <span class="section-kicker">GESTIÓN DE RIESGO</span>
           <h2>Calculadora de exposición</h2>
-          <p>Define tu capital y el porcentaje máximo que aceptarías arriesgar por operación. Evita martingala y duplicar después de una pérdida.</p>
+          <p>
+            Define tu capital y el porcentaje máximo que aceptarías arriesgar por operación.
+            El cálculo de ganancia potencial usa el payout de referencia de {{ reference_payout }}%.
+          </p>
         </div>
         <div class="risk-form">
           <label>Capital de referencia
@@ -99,26 +129,39 @@
             </select>
           </label>
           <div class="risk-output">
-            <small>EXPOSICIÓN MÁXIMA</small>
-            <strong id="riskAmount">$0.75</strong>
+            <div>
+              <small>EXPOSICIÓN MÁXIMA</small>
+              <strong id="riskAmount">$0.75</strong>
+            </div>
+            <div>
+              <small>GANANCIA POTENCIAL A {{ reference_payout }}%</small>
+              <strong id="potentialProfit">$0.56</strong>
+            </div>
           </div>
         </div>
         <div class="risk-rules">
           <span>✓ Máximo sugerido: 2% por operación</span>
           <span>✓ Pausa tras 3 pérdidas consecutivas</span>
           <span>✓ Sin martingala</span>
-          <span>✓ Límite diario recomendado</span>
+          <span>✓ El payout real puede variar en Quotex</span>
         </div>
       </div>
     </div>
 
     <aside class="signal-sidebar">
+      <div class="payout-card">
+        <small>PAYOUT DE REFERENCIA</small>
+        <strong>{{ reference_payout }}%</strong>
+        <span>retorno potencial por operación ganadora</span>
+        <p>No significa que el motor tenga {{ reference_payout }}% de rentabilidad ni que el broker pague siempre ese porcentaje.</p>
+      </div>
+
       <div class="stats-card">
-        <small>HISTORIAL DEL MOTOR</small>
+        <small>RESULTADO REAL DEL MOTOR</small>
         <div class="big-stat">
           {% if summary.accuracy is not None %}
           <strong>{{ summary.accuracy }}%</strong>
-          <span>precisión direccional cerrada</span>
+          <span>precisión direccional de señales cerradas</span>
           {% else %}
           <strong>—</strong>
           <span>sin señales cerradas todavía</span>
@@ -129,7 +172,9 @@
           <div><b>{{ summary.losses|default:0 }}</b><span>Perdidas</span></div>
           <div><b>{{ summary.draws|default:0 }}</b><span>Empates</span></div>
         </div>
-        <p class="stats-footnote">Se mide dirección usando la misma fuente pública. No equivale a P&amp;L real en Quotex ni incluye payout, spread o diferencias de cotización.</p>
+        <p class="stats-footnote">
+          Esta estadística sí se calcula con señales almacenadas. No equivale a P&amp;L real de una cuenta Quotex.
+        </p>
       </div>
 
       <div class="leaderboard-card">
@@ -149,7 +194,7 @@
           </div>
           {% empty %}
           <div class="leaderboard-empty">
-            El ranking aparecerá cuando el motor tenga señales cerradas suficientes. No mostramos ganancias inventadas.
+            El ranking aparecerá cuando el motor acumule señales cerradas suficientes.
           </div>
           {% endfor %}
         </div>
@@ -188,12 +233,12 @@
   <section class="container transparency-card">
     <div>
       <span class="section-kicker">TRANSPARENCIA</span>
-      <h3>Cómo interpretar este motor</h3>
+      <h3>Cómo interpretar las señales</h3>
     </div>
     <p>
-      Los precios provienen de Kraken y pueden diferir de Quotex. Una señal CALL/PUT indica dirección técnica,
-      no una promesa de rendimiento. La precisión mostrada se calcula únicamente con señales generadas y cerradas
-      por este sistema; no se fabrican traders, operaciones ni ganancias.
+      Los precios provienen de Kraken y pueden diferir de Quotex. CALL/PUT expresa una dirección técnica;
+      no es una promesa de beneficio. El {{ reference_payout }}% es únicamente una referencia de payout para
+      la calculadora de riesgo. La precisión histórica se calcula aparte usando las señales cerradas por el motor.
     </p>
   </section>
 </main>
@@ -204,10 +249,17 @@
 (() => {
   let selectedAsset = "{{ assets.0|escapejs }}";
   let selectedTimeframe = 1;
-  const apiBase = "{% url 'registro:signal_api' registration.public_id %}";
-  const supportUrl = "{% url 'registro:support_api' registration.public_id %}";
+  let autoEnabled = true;
+  let autoSeconds = 15;
+  let autoTimer = null;
+  let signalExpiryMs = null;
+  let signalExpiryTimer = null;
 
+  const apiBase = "{% url 'registro:signal_api' %}";
+  const supportUrl = "{% url 'registro:support_api' %}";
+  const referencePayout = Number("{{ reference_payout|default:75 }}");
   const $ = (id) => document.getElementById(id);
+
   const fmtPrice = (value) => {
     if (value === null || value === undefined) return '—';
     const n = Number(value);
@@ -216,11 +268,58 @@
            n >= 1 ? n.toFixed(4) : n.toFixed(6);
   };
 
+  function resetAutoCountdown() {
+    autoSeconds = 15;
+    $('autoCountdown').textContent = autoEnabled ? autoSeconds + ' s' : 'PAUSADO';
+  }
+
+  function startAutoTimer() {
+    if (autoTimer) clearInterval(autoTimer);
+    resetAutoCountdown();
+    autoTimer = setInterval(() => {
+      if (!autoEnabled) {
+        $('autoCountdown').textContent = 'PAUSADO';
+        return;
+      }
+      autoSeconds -= 1;
+      if (autoSeconds <= 0) {
+        autoSeconds = 15;
+        analyze(true);
+      }
+      $('autoCountdown').textContent = autoSeconds + ' s';
+    }, 1000);
+  }
+
+  function updateExpiryClock() {
+    if (!signalExpiryMs) {
+      $('signalExpiry').textContent = 'Buscando entrada';
+      return;
+    }
+    const remaining = Math.max(0, Math.floor((signalExpiryMs - Date.now()) / 1000));
+    const min = Math.floor(remaining / 60);
+    const sec = String(remaining % 60).padStart(2, '0');
+    $('signalExpiry').textContent = remaining > 0 ? min + ':' + sec : 'VENCIDA';
+    if (remaining <= 0 && autoEnabled) {
+      signalExpiryMs = null;
+      setTimeout(() => analyze(true), 800);
+    }
+  }
+
+  function setSignalExpiry(expiresAt) {
+    signalExpiryMs = expiresAt ? new Date(expiresAt).getTime() : null;
+    if (signalExpiryTimer) clearInterval(signalExpiryTimer);
+    updateExpiryClock();
+    signalExpiryTimer = setInterval(updateExpiryClock, 1000);
+  }
+
   document.querySelectorAll('.asset-chip').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.asset-chip').forEach(x => x.classList.remove('active'));
       btn.classList.add('active');
       selectedAsset = btn.dataset.asset;
+      signalExpiryMs = null;
+      resetAutoCountdown();
+      if (autoEnabled) analyze(true);
     });
   });
 
@@ -229,13 +328,25 @@
       document.querySelectorAll('.tf-btn').forEach(x => x.classList.remove('active'));
       btn.classList.add('active');
       selectedTimeframe = Number(btn.dataset.timeframe);
+      signalExpiryMs = null;
+      resetAutoCountdown();
+      if (autoEnabled) analyze(true);
     });
   });
 
-  async function analyze() {
+  $('autoMode').addEventListener('change', (event) => {
+    autoEnabled = event.target.checked;
+    resetAutoCountdown();
+    if (autoEnabled) analyze(true);
+  });
+
+  async function analyze(isAutomatic = false) {
     const button = $('analyzeBtn');
-    button.disabled = true;
-    button.textContent = 'Analizando mercado…';
+    if (!isAutomatic) {
+      button.disabled = true;
+      button.textContent = 'Analizando mercado…';
+    }
+
     $('signalState').textContent = 'ANALIZANDO';
     $('signalState').className = 'signal-state wait';
 
@@ -245,10 +356,16 @@
       url.searchParams.set('timeframe', String(selectedTimeframe));
       const response = await fetch(url, {cache:'no-store'});
       const data = await response.json();
+
+      if (response.status === 401) {
+        window.location.href = "{% url 'registro:vip_login' %}";
+        return;
+      }
       if (!response.ok || !data.ok) throw new Error(data.error || 'No se pudo calcular la señal.');
 
       const s = data.signal;
       const a = s.analysis || {};
+
       $('signalAsset').textContent = s.asset + ' · ' + s.timeframe + ' min';
       $('entryPrice').textContent = fmtPrice(s.entry_price);
       $('rsiValue').textContent = a.rsi !== undefined ? a.rsi : '—';
@@ -257,16 +374,16 @@
       $('signalConfidence').textContent = s.confidence + '/100';
       $('signalStrategy').textContent = s.strategy;
       $('signalNotice').textContent = data.notice;
+      setSignalExpiry(s.expires_at);
 
-      const direction = s.direction;
       const directionEl = $('signalDirection');
       const stateEl = $('signalState');
-      if (direction === 'CALL') {
+      if (s.direction === 'CALL') {
         directionEl.textContent = 'CALL ↑';
         directionEl.className = 'signal-direction call';
         stateEl.textContent = 'ALZA';
         stateEl.className = 'signal-state call';
-      } else if (direction === 'PUT') {
+      } else if (s.direction === 'PUT') {
         directionEl.textContent = 'PUT ↓';
         directionEl.className = 'signal-direction put';
         stateEl.textContent = 'BAJA';
@@ -281,24 +398,30 @@
       const reasons = Array.isArray(a.reasons) ? a.reasons : [];
       $('signalReasons').innerHTML = reasons.length
         ? reasons.map(x => '<span>• ' + String(x).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])) + '</span>').join('')
-        : '<span>La señal activa fue calculada previamente y continúa vigente hasta su vencimiento.</span>';
+        : '<span>La señal activa continúa vigente. El motor la mantendrá hasta su expiración.</span>';
+
+      resetAutoCountdown();
     } catch (err) {
       $('signalState').textContent = 'ERROR';
       $('signalState').className = 'signal-state put';
       $('signalDirection').textContent = '—';
       $('signalDirection').className = 'signal-direction wait';
       $('signalStrategy').textContent = err.message;
+      setSignalExpiry(null);
     } finally {
       button.disabled = false;
-      button.textContent = 'Analizar mercado ahora';
+      button.textContent = 'Generar señal ahora';
     }
   }
-  $('analyzeBtn').addEventListener('click', analyze);
+
+  $('analyzeBtn').addEventListener('click', () => analyze(false));
 
   function updateRisk() {
     const bankroll = Math.max(0, Number($('bankroll').value) || 0);
     const pct = Math.max(0, Number($('riskPct').value) || 0);
-    $('riskAmount').textContent = '$' + (bankroll * pct / 100).toFixed(2);
+    const exposure = bankroll * pct / 100;
+    $('riskAmount').textContent = '$' + exposure.toFixed(2);
+    $('potentialProfit').textContent = '$' + (exposure * referencePayout / 100).toFixed(2);
   }
   $('bankroll').addEventListener('input', updateRisk);
   $('riskPct').addEventListener('change', updateRisk);
@@ -308,13 +431,17 @@
     const container = $('supportMessages');
     const placeholder = container.querySelector('.chat-placeholder');
     if (placeholder) placeholder.remove();
+
     const div = document.createElement('div');
     div.className = 'chat-bubble ' + item.sender;
+
     const span = document.createElement('span');
     span.textContent = item.text;
+
     const small = document.createElement('small');
     const d = new Date(item.created_at);
     small.textContent = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
     div.append(span, small);
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
@@ -324,11 +451,14 @@
   async function refreshSupport() {
     try {
       const response = await fetch(supportUrl, {cache:'no-store'});
+      if (response.status === 401) return;
       const data = await response.json();
       if (!data.ok) return;
+
       const signature = JSON.stringify(data.messages);
       if (signature === supportSignature) return;
       supportSignature = signature;
+
       const container = $('supportMessages');
       container.innerHTML = '';
       if (!data.messages.length) {
@@ -344,12 +474,15 @@
     const input = $('supportInput');
     const text = input.value.trim();
     if (!text) return;
+
     $('supportStatus').textContent = 'Enviando…';
     const form = new FormData(event.currentTarget);
+
     try {
       const response = await fetch(supportUrl, {method:'POST', body:form});
       const data = await response.json();
       if (!response.ok || !data.ok) throw new Error(data.error || 'No se pudo enviar.');
+
       input.value = '';
       $('supportStatus').textContent = 'Enviado a soporte ✓';
       supportSignature = '';
@@ -361,6 +494,8 @@
 
   setInterval(refreshSupport, 5000);
   refreshSupport();
+  startAutoTimer();
+  analyze(true);
 })();
 </script>
 {% endblock %}
