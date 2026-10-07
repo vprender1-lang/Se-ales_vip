@@ -21,6 +21,7 @@ from .signal_engine import (
     MarketDataError,
     evaluate_due_signals,
     get_or_create_signal,
+    grouped_assets,
     public_signal_dict,
     strategy_leaderboard,
 )
@@ -222,6 +223,7 @@ def signals_dashboard(request):
     context.update({
         'registration': registration,
         'assets': list(ASSETS.keys()),
+        'asset_groups': grouped_assets(),
         'timeframes': TIMEFRAMES,
         'leaderboard': strategy_leaderboard(),
         'summary': summary,
