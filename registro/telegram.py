@@ -93,6 +93,35 @@ def notify_admin(registration):
     return _api_call('sendMessage', payload)
 
 
+def notify_support_message(registration, support_message):
+    chat_id = settings.TELEGRAM_ADMIN_CHAT_ID
+    if not settings.TELEGRAM_BOT_TOKEN or not chat_id:
+        return False, 'Telegram no configurado'
+    text = '\n'.join([
+        '💬 SOPORTE — SEÑALES VIP DEL LATINO',
+        f'CHAT-ID: {registration.public_id}',
+        f'🆔 Quotex: {registration.quotex_id}',
+        f'👤 Usuario: @{registration.telegram_username}',
+        '',
+        support_message.text,
+        '',
+        '↩️ Responde directamente a ESTE mensaje para contestarle en la web.',
+    ])
+    return _api_call('sendMessage', {
+        'chat_id': chat_id,
+        'text': text,
+        'disable_web_page_preview': True,
+    })
+
+
+def send_support_admin_confirmation(chat_id, text):
+    return _api_call('sendMessage', {
+        'chat_id': chat_id,
+        'text': text,
+        'disable_web_page_preview': True,
+    })
+
+
 def answer_callback_query(callback_query_id, text):
     return _api_call('answerCallbackQuery', {
         'callback_query_id': callback_query_id,
@@ -127,7 +156,7 @@ def set_webhook():
     return _api_call('setWebhook', {
         'url': webhook_url,
         'secret_token': settings.TELEGRAM_WEBHOOK_SECRET,
-        'allowed_updates': ['callback_query'],
+        'allowed_updates': ['callback_query', 'message'],
         'drop_pending_updates': True,
     })
 
