@@ -1,0 +1,41 @@
+{% extends 'registro/base.html' %}
+{% block title %}Acceso VIP | Señales VIP del Latino{% endblock %}
+{% block content %}
+<main class="vip-login-page">
+  <section class="container vip-login-wrap">
+    <div class="vip-login-copy">
+      <span class="section-kicker">ACCESO PARA REFERIDOS APROBADOS</span>
+      <h1>Entra con tu <em>ID de Quotex</em></h1>
+      <p>Si tu ID ya fue validado por el administrador, no necesitas contraseña: escribe el mismo ID aprobado y entrarás al motor de señales.</p>
+      <div class="login-points">
+        <span>✓ Acceso solo para IDs aprobados</span>
+        <span>✓ Sesión privada durante 14 días</span>
+        <span>✓ Sin contraseña de Quotex</span>
+      </div>
+    </div>
+
+    <div class="form-card vip-login-card">
+      <div class="form-topline">
+        <div><small>INICIAR SESIÓN</small><h3>Acceso VIP</h3></div>
+        <span class="secure-chip">ID VALIDADO</span>
+      </div>
+
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="field">
+          <label for="{{ form.quotex_id.id_for_label }}">ID de Quotex</label>
+          <div class="input-shell"><span>#</span>{{ form.quotex_id }}</div>
+          {% for error in form.quotex_id.errors %}<small class="error-text">{{ error }}</small>{% empty %}<small>Usa exactamente el ID que fue aprobado.</small>{% endfor %}
+        </div>
+        {% for error in form.non_field_errors %}<div class="form-message error">{{ error }}</div>{% endfor %}
+        <button class="btn btn-primary btn-full" type="submit">Entrar al motor de señales →</button>
+      </form>
+
+      <div class="vip-login-help">
+        <span>¿Aún no estás aprobado?</span>
+        <a href="{% url 'registro:home' %}#registro">Solicitar acceso</a>
+      </div>
+    </div>
+  </section>
+</main>
+{% endblock %}
