@@ -5,8 +5,8 @@
   <section class="container pro-topbar">
     <div>
       <span class="section-kicker">MOTOR PRIVADO · ID #{{ registration.quotex_id }}</span>
-      <h1>Señales claras, <em>resultados medidos</em>.</h1>
-      <p>Selecciona el activo, espera 60 segundos de análisis y recibe una lectura CALL, PUT o ESPERAR. Cada señal cerrada queda marcada como ganadora, perdedora o empate.</p>
+      <h1>Señal ahora. <em>Entrada en 60 segundos.</em></h1>
+      <p>La dirección se entrega inmediatamente. La operación empieza exactamente un minuto después, toma el precio de entrada al iniciar y se verifica automáticamente al vencer.</p>
     </div>
     <form method="post" action="{% url 'registro:vip_logout' %}">
       {% csrf_token %}
@@ -14,17 +14,17 @@
     </form>
   </section>
 
-  <section class="container trust-strip" aria-label="Indicadores de confianza">
-    <div><span class="trust-icon">✓</span><b>ID aprobado</b><small>Acceso validado</small></div>
-    <div><span class="trust-icon">60</span><b>60 s de análisis</b><small>Antes de cada señal nueva</small></div>
-    <div><span class="trust-icon">↻</span><b>Resultado automático</b><small>WIN / LOSS / DRAW</small></div>
-    <div><span class="trust-icon">◎</span><b>Fuente visible</b><small>Mercado externo verificable</small></div>
+  <section class="container trust-strip" aria-label="Funcionamiento del motor">
+    <div><span class="trust-icon">1</span><b>Señal inmediata</b><small>CALL / PUT / ESPERAR</small></div>
+    <div><span class="trust-icon">60</span><b>Entrada +60 s</b><small>Precio capturado al iniciar</small></div>
+    <div><span class="trust-icon">↻</span><b>Duración real</b><small>1 / 5 / 15 minutos</small></div>
+    <div><span class="trust-icon">✓</span><b>Resultado medido</b><small>Ganadora / Perdida / Empate</small></div>
   </section>
 
   <section class="container terminal-grid">
     <aside class="market-panel pro-card">
       <div class="pro-card-head">
-        <div><small>MERCADO</small><h2>Selecciona activo</h2></div>
+        <div><small>MERCADO</small><h2>Elige el activo</h2></div>
         <span class="asset-count">{{ assets|length }}</span>
       </div>
 
@@ -43,18 +43,14 @@
       <div class="asset-browser pro-asset-browser" id="assetGrid">
         {% for group in asset_groups %}
         <section class="asset-section" data-section="{{ group.name|lower }}">
-          <div class="asset-section-head">
-            <h3>{{ group.name }}</h3>
-            <span>{{ group.assets|length }}</span>
-          </div>
+          <div class="asset-section-head"><h3>{{ group.name }}</h3><span>{{ group.assets|length }}</span></div>
           <div class="asset-list">
             {% for asset in group.assets %}
             <div class="asset-option"
                  data-asset="{{ asset }}"
                  data-category="{% if group.name == 'Criptomonedas' %}crypto{% else %}forex{% endif %}"
                  data-search="{{ asset|lower }}">
-              <button class="asset-chip pro-asset-chip {% if forloop.parentloop.first and forloop.first %}active{% endif %}"
-                      type="button" data-asset="{{ asset }}">
+              <button class="asset-chip pro-asset-chip {% if forloop.parentloop.first and forloop.first %}active{% endif %}" type="button" data-asset="{{ asset }}">
                 <span>{{ asset }}</span>
                 <small>{% if group.name == 'Criptomonedas' %}CRYPTO{% else %}FOREX{% endif %}</small>
               </button>
@@ -68,7 +64,7 @@
       </div>
 
       <div class="market-settings">
-        <label>Duración</label>
+        <label>Duración después de la entrada</label>
         <div class="timeframe-row pro-timeframes">
           {% for tf in timeframes %}
           <button class="tf-btn {% if tf == 1 %}active{% endif %}" type="button" data-timeframe="{{ tf }}">{{ tf }} min</button>
@@ -77,7 +73,7 @@
       </div>
 
       <div class="auto-mode-row">
-        <div><b>Modo automático</b><small>Prepara la siguiente señal al terminar la anterior.</small></div>
+        <div><b>Modo automático</b><small>Al cerrar una señal prepara la siguiente.</small></div>
         <label class="auto-switch">
           <input id="autoMode" type="checkbox" checked>
           <span class="auto-slider"></span>
@@ -89,32 +85,21 @@
       <div class="signal-console pro-card">
         <div class="console-head">
           <div>
-            <span class="console-label">SEÑAL ACTUAL</span>
+            <span class="console-label">SEÑAL DEL MOTOR</span>
             <h2 id="signalAsset">{{ assets.0 }} · 1 min</h2>
           </div>
           <div class="console-status-wrap">
-            <span id="signalState" class="signal-state wait">PREPARANDO</span>
-            <small id="marketSource">Esperando análisis</small>
+            <span id="signalState" class="signal-state wait">LISTO</span>
+            <small id="marketSource">Selecciona y solicita una señal</small>
           </div>
         </div>
 
-        <div id="prepPanel" class="prep-panel">
-          <div id="prepRing" class="prep-ring" style="--progress:0deg">
-            <div>
-              <strong id="prepCountdown">01:00</strong>
-              <span>ANÁLISIS</span>
-            </div>
-          </div>
-          <div class="prep-copy">
-            <small>FILTRO DE ENTRADA</small>
-            <h3>Esperando una configuración limpia</h3>
-            <p>Durante 60 segundos el panel mantiene el activo seleccionado antes de emitir una señal nueva. Esto evita cambios impulsivos entre lecturas.</p>
-            <div class="prep-checks">
-              <span>EMA + MACD</span>
-              <span>RSI</span>
-              <span>Momentum</span>
-              <span>Volatilidad</span>
-            </div>
+        <div id="emptySignalPanel" class="empty-signal-panel">
+          <div class="empty-signal-icon">↗</div>
+          <div>
+            <small>LISTO PARA ANALIZAR</small>
+            <h3>La señal aparece inmediatamente</h3>
+            <p>Después tendrás 60 segundos para prepararte antes de que el motor capture el precio de entrada.</p>
           </div>
         </div>
 
@@ -122,29 +107,46 @@
           <div class="direction-hero">
             <div id="signalDirection" class="signal-direction wait">—</div>
             <div class="direction-meta">
-              <span>PUNTUACIÓN DE CONFLUENCIA</span>
+              <div class="quality-line">
+                <span>PUNTUACIÓN DE CONFLUENCIA</span>
+                <b id="signalQuality" class="quality-badge">—</b>
+              </div>
               <strong id="signalConfidence">—</strong>
               <p id="signalStrategy">—</p>
             </div>
           </div>
 
-          <div class="signal-timing-row">
-            <div>
-              <small>VIGENCIA RESTANTE</small>
-              <strong id="signalExpiry">—</strong>
+          <div id="entrySchedulePanel" class="entry-schedule-panel">
+            <div id="entryRing" class="prep-ring entry-ring" style="--progress:0deg">
+              <div><strong id="entryCountdown">01:00</strong><span>ENTRA EN</span></div>
             </div>
-            <div>
-              <small>PRECIO DE ENTRADA</small>
-              <strong id="entryPrice">—</strong>
-            </div>
-            <div>
-              <small>PAYOUT REFERENCIA</small>
-              <strong>{{ reference_payout }}%</strong>
+            <div class="entry-schedule-copy">
+              <small>ENTRADA PROGRAMADA</small>
+              <h3 id="scheduledEntryText">La operación comenzará en 60 segundos</h3>
+              <p>La dirección ya está definida. El precio usado para evaluar la señal se captura cuando este contador llega a cero.</p>
+              <div class="entry-times">
+                <span><small>SEÑAL EMITIDA</small><b id="issuedAt">—</b></span>
+                <span><small>ENTRADA</small><b id="entryAt">—</b></span>
+                <span><small>VENCIMIENTO</small><b id="expiresAt">—</b></span>
+              </div>
             </div>
           </div>
 
-          <div class="signal-metrics-grid pro-metrics">
+          <div id="activeTradePanel" class="active-trade-panel hidden">
+            <div class="active-trade-status">
+              <div><span class="live-dot"></span><b>SEÑAL EN CURSO</b><small>La entrada ya fue capturada.</small></div>
+              <strong id="signalExpiry">—</strong>
+            </div>
+            <div class="signal-timing-row">
+              <div><small>PRECIO AL EMITIR</small><strong id="referencePrice">—</strong></div>
+              <div><small>PRECIO DE ENTRADA</small><strong id="entryPrice">—</strong></div>
+              <div><small>PAYOUT REFERENCIA</small><strong>{{ reference_payout }}%</strong></div>
+            </div>
+          </div>
+
+          <div class="signal-metrics-grid pro-metrics-4">
             <div><small>RSI 14</small><strong id="rsiValue">—</strong></div>
+            <div><small>ESTOCÁSTICO</small><strong id="stochValue">—</strong></div>
             <div><small>ATR</small><strong id="atrValue">—</strong></div>
             <div><small>RIESGO</small><strong id="riskValue">0.5%–1%</strong></div>
           </div>
@@ -155,39 +157,35 @@
         <div id="resultBanner" class="result-banner hidden" aria-live="polite">
           <div id="resultIcon" class="result-icon">✓</div>
           <div>
-            <small>RESULTADO CERRADO</small>
+            <small>RESULTADO VERIFICADO</small>
             <h3 id="resultTitle">Señal ganadora</h3>
             <p id="resultText">—</p>
           </div>
         </div>
 
         <div class="console-footer">
-          <button id="analyzeBtn" class="btn btn-primary" type="button">Reiniciar análisis de 60 s</button>
-          <div class="next-cycle"><small>SIGUIENTE PASO</small><strong id="cycleStatus">Analizando mercado…</strong></div>
+          <button id="analyzeBtn" class="btn btn-primary" type="button">Obtener señal ahora</button>
+          <div class="next-cycle"><small>ESTADO</small><strong id="cycleStatus">Motor listo</strong></div>
         </div>
-        <div class="signal-notice" id="signalNotice">El {{ reference_payout }}% es payout de referencia, no una rentabilidad garantizada.</div>
+        <div class="signal-notice" id="signalNotice">Las señales usan cotizaciones externas. El {{ reference_payout }}% es payout de referencia, no una promesa de rentabilidad.</div>
       </div>
 
       <div class="history-card pro-card">
         <div class="pro-card-head">
-          <div><small>HISTORIAL MEDIDO</small><h2>Últimas señales</h2></div>
+          <div><small>HISTORIAL AUDITABLE</small><h2>Últimas señales</h2></div>
           <span id="recentAccuracy" class="history-accuracy">—</span>
         </div>
-        <div id="signalHistory" class="signal-history">
-          <div class="history-empty">Aún no hay resultados para este activo y temporalidad.</div>
-        </div>
+        <div id="signalHistory" class="signal-history"><div class="history-empty">Todavía no hay señales para esta selección.</div></div>
       </div>
 
       <div class="risk-card pro-risk-card">
         <div>
           <span class="section-kicker">GESTIÓN DE RIESGO</span>
           <h2>Calculadora rápida</h2>
-          <p>El payout de {{ reference_payout }}% es solo referencia. El payout real puede variar.</p>
+          <p>Calcula el monto de exposición antes de que llegue el momento de entrada.</p>
         </div>
         <div class="risk-form">
-          <label>Capital
-            <input id="bankroll" type="number" min="1" step="1" value="100">
-          </label>
+          <label>Capital<input id="bankroll" type="number" min="1" step="1" value="100"></label>
           <label>Riesgo
             <select id="riskPct">
               <option value="0.5">0.5%</option>
@@ -208,10 +206,10 @@
     <aside class="insight-panel">
       <div class="daily-traders-card pro-card">
         <div class="pro-card-head">
-          <div><small>DESTACADOS DEL DÍA</small><h2>3 traders del motor</h2></div>
+          <div><small>ESTRATEGIAS DEL DÍA</small><h2>3 perfiles destacados</h2></div>
           <span class="rotate-tag">ROTAN DIARIO</span>
         </div>
-        <p class="trader-disclaimer">Son perfiles visuales de estrategias del motor, no personas reales. Sus porcentajes solo aparecen cuando existen resultados medidos.</p>
+        <p class="trader-disclaimer">Son perfiles visuales del motor, no traders reales. Los porcentajes aparecen únicamente cuando hay resultados medidos.</p>
         <div class="daily-trader-list">
           {% for trader in daily_traders %}
           <article class="daily-trader">
@@ -222,44 +220,40 @@
               <small>{{ trader.total }} señales cerradas</small>
             </div>
             <div class="trader-score">
-              {% if trader.accuracy is not None %}
-              <strong>{{ trader.accuracy }}%</strong>
+              {% if trader.accuracy is not None %}<strong>{{ trader.accuracy }}%</strong>{% else %}<strong>—</strong>{% endif %}
               <span>{{ trader.label }}</span>
-              {% else %}
-              <strong>—</strong>
-              <span>{{ trader.label }}</span>
-              {% endif %}
             </div>
           </article>
           {% endfor %}
         </div>
       </div>
 
+      <div class="engine-card pro-card">
+        <div class="pro-card-head"><div><small>MOTOR V3</small><h2>Confluencias utilizadas</h2></div><span class="engine-badge">MULTIFACTOR</span></div>
+        <div class="engine-grid">
+          <span>EMA 9/21/50</span><span>MACD</span><span>RSI 14</span><span>Estocástico</span>
+          <span>Momentum</span><span>ATR</span><span>Bandas</span><span>Soporte/Resistencia</span>
+        </div>
+        <p>Una sola condición no genera la entrada: el motor exige confluencia antes de emitir CALL o PUT.</p>
+      </div>
+
       <div class="payout-card pro-payout-card">
         <small>PAYOUT DE REFERENCIA</small>
         <strong>{{ reference_payout }}%</strong>
-        <span>retorno potencial sobre el monto arriesgado si la operación gana</span>
-        <p>La precisión histórica del motor se muestra aparte y nunca se sustituye por este número.</p>
+        <span>retorno potencial si la operación gana</span>
+        <p>La precisión histórica se calcula aparte con señales cerradas.</p>
       </div>
 
       <div class="support-card pro-card">
-        <div class="support-head">
-          <div><small>SOPORTE DIRECTO</small><h3>Habla con el administrador</h3></div>
-          <span class="support-dot"></span>
-        </div>
+        <div class="support-head"><div><small>SOPORTE DIRECTO</small><h3>Habla con el administrador</h3></div><span class="support-dot"></span></div>
         <div id="supportMessages" class="support-messages">
           {% for item in support_messages %}
           <div class="chat-bubble {{ item.sender }}"><span>{{ item.text }}</span><small>{{ item.created_at|date:"H:i" }}</small></div>
-          {% empty %}
-          <div class="chat-placeholder">Escribe si necesitas ayuda con tu acceso o el panel.</div>
-          {% endfor %}
+          {% empty %}<div class="chat-placeholder">Escribe si necesitas ayuda con el panel.</div>{% endfor %}
         </div>
         <form id="supportForm" method="post">
           {% csrf_token %}
-          <div class="support-compose">
-            <textarea id="supportInput" name="message" maxlength="1200" placeholder="Escribe tu mensaje…" required></textarea>
-            <button type="submit" aria-label="Enviar">➤</button>
-          </div>
+          <div class="support-compose"><textarea id="supportInput" name="message" maxlength="1200" placeholder="Escribe tu mensaje…" required></textarea><button type="submit" aria-label="Enviar">➤</button></div>
           <small id="supportStatus"></small>
         </form>
       </div>
@@ -267,8 +261,8 @@
   </section>
 
   <section class="container transparency-card pro-transparency">
-    <div><span class="section-kicker">TRANSPARENCIA</span><h3>Qué significa “ganadora” o “perdedora”</h3></div>
-    <p>El resultado se calcula comparando el precio de entrada con la cotización externa disponible cuando vence la señal. Puede diferir de Quotex por fuente, horario, spread o activo OTC. Por eso el historial se presenta como medición del motor, no como P&amp;L garantizado del broker.</p>
+    <div><span class="section-kicker">TRANSPARENCIA</span><h3>Cómo se mide el resultado</h3></div>
+    <p>La señal se publica primero. Sesenta segundos después se captura el precio de entrada de la fuente externa. Desde ahí corre la duración elegida. Al vencer se compara el precio final con el de entrada para clasificarla como ganadora, perdedora o empate. Puede existir diferencia frente a la cotización de Quotex.</p>
   </section>
 </main>
 {% endblock %}
@@ -279,14 +273,16 @@
   let selectedAsset = "{{ assets.0|escapejs }}";
   let selectedTimeframe = 1;
   let autoEnabled = true;
-  let prepSeconds = 60;
-  let prepTimer = null;
   let activeSignalId = null;
-  let activeSignalExpiry = null;
   let activeSignalOpen = false;
+  let signalGeneratedAt = null;
+  let scheduledEntryAt = null;
+  let activeSignalExpiry = null;
+  let executionEntryPrice = null;
   let favorites = new Set(JSON.parse(localStorage.getItem('vipAssetFavorites') || '[]'));
   let currentFilter = 'all';
   let historySignature = '';
+  let autoRetryTimer = null;
 
   const apiBase = "{% url 'registro:signal_api' %}";
   const historyUrl = "{% url 'registro:signal_history_api' %}";
@@ -297,281 +293,303 @@
 
   const escapeHtml = value => String(value).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const fmtPrice = value => {
-    const n = Number(value);
-    if (!Number.isFinite(n)) return '—';
-    return n >= 1000 ? n.toLocaleString(undefined,{maximumFractionDigits:2}) : n >= 1 ? n.toFixed(5) : n.toFixed(7);
+    if(value === null || value === undefined) return '—';
+    const n=Number(value);
+    if(!Number.isFinite(n)) return '—';
+    return n>=1000?n.toLocaleString(undefined,{maximumFractionDigits:2}):n>=1?n.toFixed(5):n.toFixed(7);
   };
   const fmtTime = iso => {
-    const d = new Date(iso);
-    return Number.isNaN(d.getTime()) ? '—' : d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    const d=new Date(iso);
+    return Number.isNaN(d.getTime())?'—':d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  };
+  const fmtCountdown = seconds => {
+    const s=Math.max(0,Math.floor(seconds));
+    return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
   };
 
   function refreshFavoriteButtons(){
-    document.querySelectorAll('.favorite-btn').forEach(btn => {
-      const active = favorites.has(btn.dataset.favorite);
-      btn.textContent = active ? '★' : '☆';
-      btn.classList.toggle('active', active);
+    document.querySelectorAll('.favorite-btn').forEach(btn=>{
+      const active=favorites.has(btn.dataset.favorite);
+      btn.textContent=active?'★':'☆';
+      btn.classList.toggle('active',active);
     });
   }
 
   function applyAssetFilter(){
-    const query = $('assetSearch').value.trim().toLowerCase();
-    let visible = 0;
-    document.querySelectorAll('.asset-section').forEach(section => {
-      let sectionCount = 0;
-      section.querySelectorAll('.asset-option').forEach(option => {
-        const asset = option.dataset.asset;
-        const category = option.dataset.category;
-        const matchesFilter = currentFilter === 'all' || currentFilter === category || (currentFilter === 'favorites' && favorites.has(asset));
-        const matchesSearch = !query || option.dataset.search.includes(query);
-        const show = matchesFilter && matchesSearch;
-        option.classList.toggle('hidden', !show);
-        if(show){ visible++; sectionCount++; }
+    const query=$('assetSearch').value.trim().toLowerCase();
+    let visible=0;
+    document.querySelectorAll('.asset-section').forEach(section=>{
+      let sectionCount=0;
+      section.querySelectorAll('.asset-option').forEach(option=>{
+        const asset=option.dataset.asset;
+        const category=option.dataset.category;
+        const matchFilter=currentFilter==='all'||currentFilter===category||(currentFilter==='favorites'&&favorites.has(asset));
+        const show=matchFilter&&(!query||option.dataset.search.includes(query));
+        option.classList.toggle('hidden',!show);
+        if(show){visible++;sectionCount++;}
       });
-      section.classList.toggle('hidden', sectionCount === 0);
+      section.classList.toggle('hidden',sectionCount===0);
     });
-    $('assetEmpty').classList.toggle('hidden', visible > 0);
+    $('assetEmpty').classList.toggle('hidden',visible>0);
   }
 
-  document.querySelectorAll('.favorite-btn').forEach(btn => btn.addEventListener('click', e => {
+  document.querySelectorAll('.favorite-btn').forEach(btn=>btn.addEventListener('click',e=>{
     e.stopPropagation();
-    const asset = btn.dataset.favorite;
-    favorites.has(asset) ? favorites.delete(asset) : favorites.add(asset);
-    localStorage.setItem('vipAssetFavorites', JSON.stringify([...favorites]));
-    refreshFavoriteButtons();
-    applyAssetFilter();
+    const asset=btn.dataset.favorite;
+    favorites.has(asset)?favorites.delete(asset):favorites.add(asset);
+    localStorage.setItem('vipAssetFavorites',JSON.stringify([...favorites]));
+    refreshFavoriteButtons(); applyAssetFilter();
   }));
-
-  document.querySelectorAll('.asset-tab').forEach(btn => btn.addEventListener('click', () => {
-    document.querySelectorAll('.asset-tab').forEach(x => x.classList.remove('active'));
-    btn.classList.add('active');
-    currentFilter = btn.dataset.filter;
-    applyAssetFilter();
+  document.querySelectorAll('.asset-tab').forEach(btn=>btn.addEventListener('click',()=>{
+    document.querySelectorAll('.asset-tab').forEach(x=>x.classList.remove('active'));
+    btn.classList.add('active'); currentFilter=btn.dataset.filter; applyAssetFilter();
   }));
-  $('assetSearch').addEventListener('input', applyAssetFilter);
+  $('assetSearch').addEventListener('input',applyAssetFilter);
 
-  function selectAsset(asset){
-    selectedAsset = asset;
-    document.querySelectorAll('.asset-chip').forEach(x => x.classList.toggle('active', x.dataset.asset === asset));
-    resetCycle();
+  function canChangeSelection(){
+    if(activeSignalOpen){
+      $('cycleStatus').textContent='La señal actual debe cerrar antes de cambiar';
+      return false;
+    }
+    return true;
   }
-  document.querySelectorAll('.asset-chip').forEach(btn => btn.addEventListener('click', () => selectAsset(btn.dataset.asset)));
-
-  document.querySelectorAll('.tf-btn').forEach(btn => btn.addEventListener('click', () => {
-    document.querySelectorAll('.tf-btn').forEach(x => x.classList.remove('active'));
-    btn.classList.add('active');
-    selectedTimeframe = Number(btn.dataset.timeframe);
-    resetCycle();
+  document.querySelectorAll('.asset-chip').forEach(btn=>btn.addEventListener('click',()=>{
+    if(!canChangeSelection()) return;
+    selectedAsset=btn.dataset.asset;
+    document.querySelectorAll('.asset-chip').forEach(x=>x.classList.toggle('active',x.dataset.asset===selectedAsset));
+    $('signalAsset').textContent=selectedAsset+' · '+selectedTimeframe+' min';
+    historySignature=''; refreshHistory();
+  }));
+  document.querySelectorAll('.tf-btn').forEach(btn=>btn.addEventListener('click',()=>{
+    if(!canChangeSelection()) return;
+    selectedTimeframe=Number(btn.dataset.timeframe);
+    document.querySelectorAll('.tf-btn').forEach(x=>x.classList.toggle('active',Number(x.dataset.timeframe)===selectedTimeframe));
+    $('signalAsset').textContent=selectedAsset+' · '+selectedTimeframe+' min';
+    historySignature=''; refreshHistory();
   }));
 
-  $('autoMode').addEventListener('change', e => {
-    autoEnabled = e.target.checked;
-    $('cycleStatus').textContent = autoEnabled ? 'Modo automático activo' : 'Modo automático pausado';
-    if(autoEnabled && !activeSignalOpen && !prepTimer) startPreparation();
+  $('autoMode').addEventListener('change',e=>{
+    autoEnabled=e.target.checked;
+    $('cycleStatus').textContent=autoEnabled?'Modo automático activo':'Modo automático pausado';
   });
 
-  function showPreparation(){
-    $('prepPanel').classList.remove('hidden');
-    $('liveSignalPanel').classList.add('hidden');
+  function setDirection(s){
+    if(s.direction==='CALL'){
+      $('signalDirection').textContent='CALL ↑'; $('signalDirection').className='signal-direction call';
+      $('signalState').textContent=s.phase==='scheduled'?'SEÑAL LISTA':'ALZA'; $('signalState').className='signal-state call';
+    }else if(s.direction==='PUT'){
+      $('signalDirection').textContent='PUT ↓'; $('signalDirection').className='signal-direction put';
+      $('signalState').textContent=s.phase==='scheduled'?'SEÑAL LISTA':'BAJA'; $('signalState').className='signal-state put';
+    }else{
+      $('signalDirection').textContent='ESPERAR'; $('signalDirection').className='signal-direction wait';
+      $('signalState').textContent='SIN ENTRADA'; $('signalState').className='signal-state wait';
+    }
+  }
+
+  function showSignal(s,a,notice){
+    $('emptySignalPanel').classList.add('hidden');
+    $('liveSignalPanel').classList.remove('hidden');
     $('resultBanner').classList.add('hidden');
-    $('signalState').textContent = 'PREPARANDO';
-    $('signalState').className = 'signal-state wait';
-    $('marketSource').textContent = 'Esperando análisis';
+    $('signalAsset').textContent=s.asset+' · '+s.timeframe+' min';
+    $('signalConfidence').textContent=s.confidence+'/100';
+    $('signalQuality').textContent=a.quality|| (s.confidence>=80?'ALTA':s.confidence>=68?'MEDIA':'OBSERVACIÓN');
+    $('signalQuality').className='quality-badge '+(s.confidence>=80?'high':s.confidence>=68?'medium':'watch');
+    $('signalStrategy').textContent=s.strategy;
+    $('referencePrice').textContent=fmtPrice(s.entry_price);
+    $('entryPrice').textContent=fmtPrice(s.execution_entry_price);
+    $('rsiValue').textContent=a.rsi!==undefined?a.rsi:'—';
+    $('stochValue').textContent=a.stochastic!==undefined?a.stochastic:'—';
+    $('atrValue').textContent=a.atr_pct!==undefined?a.atr_pct+'%':'—';
+    $('riskValue').textContent=a.risk_pct!==undefined?a.risk_pct+'%':'0.5%–1%';
+    $('marketSource').textContent=s.source||a.source||'Fuente pública';
+    $('signalNotice').textContent=notice||$('signalNotice').textContent;
+    setDirection(s);
+
+    const reasons=Array.isArray(a.reasons)?a.reasons:[];
+    $('signalReasons').innerHTML=reasons.length?reasons.map(x=>'<span>• '+escapeHtml(x)+'</span>').join(''):'<span>Señal vigente calculada previamente.</span>';
+
+    activeSignalId=s.id;
+    activeSignalOpen=Boolean(s.id&&s.status==='open');
+    signalGeneratedAt=s.generated_at?new Date(s.generated_at).getTime():Date.now();
+    scheduledEntryAt=s.scheduled_entry_at?new Date(s.scheduled_entry_at).getTime():null;
+    activeSignalExpiry=s.expires_at?new Date(s.expires_at).getTime():null;
+    executionEntryPrice=s.execution_entry_price;
+    $('issuedAt').textContent=fmtTime(s.generated_at);
+    $('entryAt').textContent=fmtTime(s.scheduled_entry_at);
+    $('expiresAt').textContent=fmtTime(s.expires_at);
+    syncPhase(s.phase);
+    updateClocks();
   }
 
-  function updatePrepUI(){
-    const min = Math.floor(prepSeconds / 60);
-    const sec = String(prepSeconds % 60).padStart(2,'0');
-    $('prepCountdown').textContent = String(min).padStart(2,'0') + ':' + sec;
-    const elapsed = 60 - prepSeconds;
-    const deg = Math.max(0, Math.min(360, elapsed / 60 * 360));
-    $('prepRing').style.setProperty('--progress', deg + 'deg');
-    $('cycleStatus').textContent = 'Analizando ' + selectedAsset + ' · ' + prepSeconds + ' s';
+  function syncPhase(phase){
+    if(!activeSignalOpen) return;
+    if(phase==='scheduled'||phase==='activating'){
+      $('entrySchedulePanel').classList.remove('hidden');
+      $('activeTradePanel').classList.add('hidden');
+      $('cycleStatus').textContent=phase==='activating'?'Capturando precio de entrada…':'Señal entregada · entrada en 60 s';
+    }else if(phase==='active'){
+      $('entrySchedulePanel').classList.add('hidden');
+      $('activeTradePanel').classList.remove('hidden');
+      $('signalState').textContent='EN CURSO';
+      $('cycleStatus').textContent='Operación en curso';
+      $('entryPrice').textContent=fmtPrice(executionEntryPrice);
+    }
   }
 
-  function startPreparation(){
-    if(activeSignalOpen) return;
-    if(prepTimer) clearInterval(prepTimer);
-    prepSeconds = 60;
-    showPreparation();
-    updatePrepUI();
-    prepTimer = setInterval(async () => {
-      prepSeconds -= 1;
-      updatePrepUI();
-      if(prepSeconds <= 0){
-        clearInterval(prepTimer);
-        prepTimer = null;
-        await requestSignal();
-      }
-    },1000);
-  }
+  function updateClocks(){
+    const now=Date.now();
+    if(activeSignalOpen&&scheduledEntryAt&&now<scheduledEntryAt){
+      const seconds=(scheduledEntryAt-now)/1000;
+      $('entryCountdown').textContent=fmtCountdown(seconds);
+      const elapsed=Math.max(0,60-seconds);
+      $('entryRing').style.setProperty('--progress',Math.min(360,elapsed/60*360)+'deg');
+      $('scheduledEntryText').textContent='Entrada en '+fmtCountdown(seconds);
+    }else if(activeSignalOpen&&scheduledEntryAt&&!executionEntryPrice){
+      $('entryCountdown').textContent='00:00';
+      $('entryRing').style.setProperty('--progress','360deg');
+      $('scheduledEntryText').textContent='Capturando precio de entrada…';
+    }
 
-  function resetCycle(){
-    activeSignalId = null;
-    activeSignalExpiry = null;
-    activeSignalOpen = false;
-    historySignature = '';
-    refreshHistory();
-    startPreparation();
+    if(activeSignalOpen&&executionEntryPrice&&activeSignalExpiry){
+      const seconds=Math.max(0,(activeSignalExpiry-now)/1000);
+      $('signalExpiry').textContent=seconds>0?fmtCountdown(seconds):'VERIFICANDO…';
+    }
   }
+  setInterval(updateClocks,500);
 
   async function requestSignal(){
-    $('cycleStatus').textContent = 'Calculando señal…';
-    $('signalState').textContent = 'ANALIZANDO';
-    try{
-      const url = new URL(apiBase, window.location.origin);
-      url.searchParams.set('asset', selectedAsset);
-      url.searchParams.set('timeframe', String(selectedTimeframe));
-      const response = await fetch(url,{cache:'no-store'});
-      if(response.status === 401){ window.location.href = loginUrl; return; }
-      const data = await response.json();
-      if(!response.ok || !data.ok) throw new Error(data.error || 'No fue posible calcular la señal.');
-
-      const s = data.signal;
-      const a = s.analysis || {};
-      $('prepPanel').classList.add('hidden');
-      $('liveSignalPanel').classList.remove('hidden');
-      $('resultBanner').classList.add('hidden');
-      $('signalAsset').textContent = s.asset + ' · ' + s.timeframe + ' min';
-      $('signalConfidence').textContent = s.confidence + '/100';
-      $('signalStrategy').textContent = s.strategy;
-      $('entryPrice').textContent = fmtPrice(s.entry_price);
-      $('rsiValue').textContent = a.rsi !== undefined ? a.rsi : '—';
-      $('atrValue').textContent = a.atr_pct !== undefined ? a.atr_pct + '%' : '—';
-      $('riskValue').textContent = a.risk_pct !== undefined ? a.risk_pct + '%' : '0.5%–1%';
-      $('marketSource').textContent = s.source || a.source || 'Fuente pública';
-      $('signalNotice').textContent = data.notice;
-
-      if(s.direction === 'CALL'){
-        $('signalDirection').textContent = 'CALL ↑';
-        $('signalDirection').className = 'signal-direction call';
-        $('signalState').textContent = 'ALZA';
-        $('signalState').className = 'signal-state call';
-      }else if(s.direction === 'PUT'){
-        $('signalDirection').textContent = 'PUT ↓';
-        $('signalDirection').className = 'signal-direction put';
-        $('signalState').textContent = 'BAJA';
-        $('signalState').className = 'signal-state put';
-      }else{
-        $('signalDirection').textContent = 'ESPERAR';
-        $('signalDirection').className = 'signal-direction wait';
-        $('signalState').textContent = a.market_fresh === false ? 'MERCADO CERRADO' : 'SIN ENTRADA';
-        $('signalState').className = 'signal-state wait';
-      }
-
-      const reasons = Array.isArray(a.reasons) ? a.reasons : [];
-      $('signalReasons').innerHTML = reasons.length ? reasons.map(x => '<span>• '+escapeHtml(x)+'</span>').join('') : '<span>Sin confluencia suficiente para una entrada nueva.</span>';
-
-      activeSignalId = s.id;
-      activeSignalExpiry = s.expires_at ? new Date(s.expires_at).getTime() : null;
-      activeSignalOpen = Boolean(s.id && s.expires_at);
-      updateExpiry();
-
-      if(!activeSignalOpen && autoEnabled){
-        $('cycleStatus').textContent = 'Sin entrada · nuevo análisis en 60 s';
-        setTimeout(() => { if(autoEnabled && !activeSignalOpen) startPreparation(); }, 1500);
-      }else{
-        $('cycleStatus').textContent = 'Señal activa · esperando vencimiento';
-      }
-
-      await refreshHistory();
-    }catch(err){
-      $('prepPanel').classList.add('hidden');
-      $('liveSignalPanel').classList.remove('hidden');
-      $('signalDirection').textContent = '—';
-      $('signalDirection').className = 'signal-direction wait';
-      $('signalState').textContent = 'SIN DATOS';
-      $('signalState').className = 'signal-state put';
-      $('signalStrategy').textContent = err.message;
-      $('cycleStatus').textContent = 'Reintento disponible';
-      if(autoEnabled) setTimeout(() => startPreparation(), 3000);
-    }
-  }
-
-  function updateExpiry(){
-    if(!activeSignalExpiry){ $('signalExpiry').textContent = '—'; return; }
-    const remaining = Math.max(0, Math.floor((activeSignalExpiry - Date.now())/1000));
-    const min = Math.floor(remaining/60);
-    const sec = String(remaining%60).padStart(2,'0');
-    $('signalExpiry').textContent = remaining > 0 ? min + ':' + sec : 'VERIFICANDO…';
-  }
-  setInterval(updateExpiry,1000);
-
-  function renderHistory(items, accuracy){
-    $('recentAccuracy').textContent = accuracy === null ? 'Sin muestra' : accuracy + '% últimas';
-    if(!items.length){
-      $('signalHistory').innerHTML = '<div class="history-empty">Aún no hay resultados para este activo y temporalidad.</div>';
+    if(activeSignalOpen){
+      $('cycleStatus').textContent='Espera a que cierre la señal actual';
       return;
     }
-    $('signalHistory').innerHTML = items.map(item => {
-      const cls = item.outcome === 'win' ? 'win' : item.outcome === 'loss' ? 'loss' : item.outcome === 'draw' ? 'draw' : 'open';
-      const label = item.outcome === 'win' ? 'GANADORA' : item.outcome === 'loss' ? 'PERDEDORA' : item.outcome === 'draw' ? 'EMPATE' : 'ABIERTA';
+    if(autoRetryTimer){clearTimeout(autoRetryTimer);autoRetryTimer=null;}
+    $('analyzeBtn').disabled=true;
+    $('analyzeBtn').textContent='Analizando…';
+    $('signalState').textContent='ANALIZANDO';
+    $('cycleStatus').textContent='Calculando confluencias…';
+    try{
+      const url=new URL(apiBase,window.location.origin);
+      url.searchParams.set('asset',selectedAsset);
+      url.searchParams.set('timeframe',String(selectedTimeframe));
+      const response=await fetch(url,{cache:'no-store'});
+      if(response.status===401){window.location.href=loginUrl;return;}
+      const data=await response.json();
+      if(!response.ok||!data.ok) throw new Error(data.error||'No fue posible calcular la señal.');
+      showSignal(data.signal,data.signal.analysis||{},data.notice);
+
+      if(!data.signal.id){
+        activeSignalOpen=false;
+        $('cycleStatus').textContent='Sin confluencia suficiente';
+        if(autoEnabled) autoRetryTimer=setTimeout(requestSignal,30000);
+      }else{
+        $('analyzeBtn').textContent='Señal emitida';
+      }
+      await refreshHistory();
+    }catch(err){
+      $('signalState').textContent='SIN DATOS';
+      $('signalState').className='signal-state put';
+      $('cycleStatus').textContent=err.message;
+      if(autoEnabled) autoRetryTimer=setTimeout(requestSignal,30000);
+    }finally{
+      $('analyzeBtn').disabled=activeSignalOpen;
+      if(!activeSignalOpen) $('analyzeBtn').textContent='Obtener señal ahora';
+    }
+  }
+  $('analyzeBtn').addEventListener('click',requestSignal);
+
+  function renderHistory(items,accuracy){
+    $('recentAccuracy').textContent=accuracy===null?'Sin muestra':accuracy+'% recientes';
+    if(!items.length){
+      $('signalHistory').innerHTML='<div class="history-empty">Todavía no hay señales para esta selección.</div>';
+      return;
+    }
+    $('signalHistory').innerHTML=items.map(item=>{
+      const cls=item.outcome==='win'?'win':item.outcome==='loss'?'loss':item.outcome==='draw'?'draw':'open';
+      let label='PROGRAMADA';
+      if(item.outcome==='win') label='GANADORA';
+      else if(item.outcome==='loss') label='PERDEDORA';
+      else if(item.outcome==='draw') label='EMPATE';
+      else if(item.phase==='active') label='EN CURSO';
+      else if(item.phase==='activating') label='INICIANDO';
+
+      const realEntry=item.execution_entry_price!==null?fmtPrice(item.execution_entry_price):'pendiente';
       return '<article class="history-row '+cls+'">'+
         '<div class="history-direction '+item.direction.toLowerCase()+'">'+escapeHtml(item.direction)+'</div>'+
-        '<div class="history-main"><strong>'+escapeHtml(item.asset)+' · '+item.timeframe+' min</strong><span>'+escapeHtml(item.strategy)+' · '+fmtTime(item.generated_at)+'</span></div>'+
-        '<div class="history-prices"><small>'+fmtPrice(item.entry_price)+' → '+(item.exit_price===null?'—':fmtPrice(item.exit_price))+'</small><b>'+label+'</b></div>'+
+        '<div class="history-main"><strong>'+escapeHtml(item.asset)+' · '+item.timeframe+' min</strong>'+
+        '<span>Señal '+fmtTime(item.generated_at)+' · entrada '+fmtTime(item.scheduled_entry_at)+'</span></div>'+
+        '<div class="history-prices"><small>'+realEntry+' → '+(item.exit_price===null?'—':fmtPrice(item.exit_price))+'</small><b>'+label+'</b></div>'+
       '</article>';
     }).join('');
   }
 
   function showOutcome(item){
-    activeSignalOpen = false;
-    activeSignalExpiry = null;
+    activeSignalOpen=false;
+    activeSignalId=null;
+    scheduledEntryAt=null;
+    activeSignalExpiry=null;
+    executionEntryPrice=null;
+    $('analyzeBtn').disabled=false;
+    $('analyzeBtn').textContent='Obtener nueva señal';
+    $('entrySchedulePanel').classList.add('hidden');
+    $('activeTradePanel').classList.add('hidden');
     $('resultBanner').classList.remove('hidden');
-    $('resultBanner').className = 'result-banner ' + item.outcome;
-    if(item.outcome === 'win'){
-      $('resultIcon').textContent = '✓';
-      $('resultTitle').textContent = 'Señal ganadora';
-    }else if(item.outcome === 'loss'){
-      $('resultIcon').textContent = '×';
-      $('resultTitle').textContent = 'Señal perdedora';
+    $('resultBanner').className='result-banner '+item.outcome;
+    if(item.outcome==='win'){
+      $('resultIcon').textContent='✓'; $('resultTitle').textContent='SEÑAL GANADORA';
+    }else if(item.outcome==='loss'){
+      $('resultIcon').textContent='×'; $('resultTitle').textContent='SEÑAL PERDEDORA';
     }else{
-      $('resultIcon').textContent = '=';
-      $('resultTitle').textContent = 'Señal en empate';
+      $('resultIcon').textContent='='; $('resultTitle').textContent='SEÑAL EN EMPATE';
     }
-    $('resultText').textContent = item.asset + ' · entrada ' + fmtPrice(item.entry_price) + ' · salida ' + fmtPrice(item.exit_price);
-    $('cycleStatus').textContent = autoEnabled ? 'Resultado cerrado · próximo análisis en 60 s' : 'Resultado cerrado';
-    if(autoEnabled) setTimeout(() => startPreparation(), 1800);
+    $('resultText').textContent=item.asset+' · entrada '+fmtPrice(item.execution_entry_price)+' · salida '+fmtPrice(item.exit_price);
+    $('signalState').textContent='CERRADA';
+    $('signalState').className='signal-state wait';
+    $('cycleStatus').textContent=autoEnabled?'Resultado verificado · preparando nueva señal':'Resultado verificado';
+    if(autoEnabled) autoRetryTimer=setTimeout(requestSignal,2500);
+  }
+
+  function syncCurrentSignal(item){
+    if(!item||item.id!==activeSignalId) return;
+    executionEntryPrice=item.execution_entry_price;
+    if(item.phase==='active'){
+      syncPhase('active');
+      $('entryPrice').textContent=fmtPrice(item.execution_entry_price);
+    }else if(item.phase==='activating'){
+      syncPhase('activating');
+    }else if(item.phase==='scheduled'){
+      syncPhase('scheduled');
+    }
+    if(item.outcome!=='open'&&activeSignalOpen) showOutcome(item);
   }
 
   async function refreshHistory(){
     try{
-      const url = new URL(historyUrl,window.location.origin);
+      const url=new URL(historyUrl,window.location.origin);
       url.searchParams.set('asset',selectedAsset);
       url.searchParams.set('timeframe',String(selectedTimeframe));
-      const response = await fetch(url,{cache:'no-store'});
-      if(response.status === 401) return;
-      const data = await response.json();
+      const response=await fetch(url,{cache:'no-store'});
+      if(response.status===401) return;
+      const data=await response.json();
       if(!data.ok) return;
-
-      const signature = JSON.stringify(data.signals);
-      if(signature !== historySignature){
-        historySignature = signature;
+      const signature=JSON.stringify(data.signals);
+      if(signature!==historySignature){
+        historySignature=signature;
         renderHistory(data.signals,data.recent_accuracy);
       }
-
       if(activeSignalId){
-        const current = data.signals.find(x => x.id === activeSignalId);
-        if(current && current.outcome !== 'open' && activeSignalOpen) showOutcome(current);
+        const current=data.signals.find(x=>x.id===activeSignalId);
+        syncCurrentSignal(current);
       }
     }catch(e){}
   }
-  setInterval(refreshHistory,3000);
-
-  $('analyzeBtn').addEventListener('click', () => {
-    if(activeSignalOpen){
-      $('cycleStatus').textContent = 'Espera a que cierre la señal actual';
-      return;
-    }
-    startPreparation();
-  });
+  setInterval(refreshHistory,2000);
 
   function updateRisk(){
-    const bankroll = Math.max(0,Number($('bankroll').value)||0);
-    const pct = Math.max(0,Number($('riskPct').value)||0);
-    const exposure = bankroll*pct/100;
-    $('riskAmount').textContent = '$'+exposure.toFixed(2);
-    $('potentialProfit').textContent = '$'+(exposure*referencePayout/100).toFixed(2);
+    const bankroll=Math.max(0,Number($('bankroll').value)||0);
+    const pct=Math.max(0,Number($('riskPct').value)||0);
+    const exposure=bankroll*pct/100;
+    $('riskAmount').textContent='$'+exposure.toFixed(2);
+    $('potentialProfit').textContent='$'+(exposure*referencePayout/100).toFixed(2);
   }
   $('bankroll').addEventListener('input',updateRisk);
   $('riskPct').addEventListener('change',updateRisk);
@@ -581,13 +599,11 @@
     const container=$('supportMessages');
     const placeholder=container.querySelector('.chat-placeholder');
     if(placeholder) placeholder.remove();
-    const div=document.createElement('div');
-    div.className='chat-bubble '+item.sender;
+    const div=document.createElement('div'); div.className='chat-bubble '+item.sender;
     const span=document.createElement('span'); span.textContent=item.text;
     const small=document.createElement('small'); small.textContent=fmtTime(item.created_at);
     div.append(span,small); container.appendChild(div); container.scrollTop=container.scrollHeight;
   }
-
   let supportSignature='';
   async function refreshSupport(){
     try{
@@ -599,11 +615,10 @@
       if(signature===supportSignature) return;
       supportSignature=signature;
       const container=$('supportMessages'); container.innerHTML='';
-      if(!data.messages.length) container.innerHTML='<div class="chat-placeholder">Escribe si necesitas ayuda con tu acceso o el panel.</div>';
+      if(!data.messages.length) container.innerHTML='<div class="chat-placeholder">Escribe si necesitas ayuda con el panel.</div>';
       else data.messages.forEach(appendBubble);
     }catch(e){}
   }
-
   $('supportForm').addEventListener('submit',async event=>{
     event.preventDefault();
     const input=$('supportInput');
@@ -614,7 +629,7 @@
       const data=await response.json();
       if(!response.ok||!data.ok) throw new Error(data.error||'No se pudo enviar.');
       input.value=''; $('supportStatus').textContent='Enviado ✓'; supportSignature=''; await refreshSupport();
-    }catch(err){ $('supportStatus').textContent=err.message; }
+    }catch(err){$('supportStatus').textContent=err.message;}
   });
 
   refreshFavoriteButtons();
@@ -622,7 +637,7 @@
   refreshHistory();
   refreshSupport();
   setInterval(refreshSupport,5000);
-  startPreparation();
+  setTimeout(requestSignal,700);
 })();
 </script>
 {% endblock %}
