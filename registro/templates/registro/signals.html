@@ -471,7 +471,7 @@
     setDirection(s);
 
     const reasons=Array.isArray(a.reasons)?a.reasons:[];
-    $('signalReasons').innerHTML=reasons.length?reasons.map(x=>'<span>• '+escapeHtml(x)+'</span>').join(''):'<span>Señal vigente calculada previamente.</span>';
+    $('signalReasons').innerHTML=reasons.length?reasons.map(x=>'<span>• '+escapeHtml(x)+'</span>').join(''):'<span>Publicada manualmente por el administrador.</span>';
 
     activeSignalId=s.id;
     activeSignalOpen=Boolean(s.id&&s.status==='open');
@@ -494,7 +494,7 @@
     if(phase==='scheduled'||phase==='activating'){
       $('entrySchedulePanel').classList.remove('hidden');
       $('activeTradePanel').classList.add('hidden');
-      $('cycleStatus').textContent=phase==='activating'?'Capturando precio de entrada…':'Señal entregada · entrada en 60 s';
+      $('cycleStatus').textContent=phase==='activating'?'Esperando confirmación manual…':'Entrada programada por el administrador';
       $('ticketPhaseBadge').textContent=phase==='activating'?'INICIANDO':'PROGRAMADA';
       $('ticketRunningBlock').classList.add('hidden');
       $('ticketResultBlock').classList.add('hidden');
@@ -527,9 +527,9 @@
       $('scheduledEntryText').textContent='Capturando precio de entrada…';
     }
 
-    if(activeSignalOpen&&executionEntryPrice&&activeSignalExpiry){
+    if(activeSignalOpen&&activeSignalExpiry&&scheduledEntryAt&&now>=scheduledEntryAt){
       const seconds=Math.max(0,(activeSignalExpiry-now)/1000);
-      const remainingText=seconds>0?fmtCountdown(seconds):'VERIFICANDO…';
+      const remainingText=seconds>0?fmtCountdown(seconds):'PENDIENTE DE RESULTADO';
       $('signalExpiry').textContent=remainingText;
       $('ticketRemaining').textContent=remainingText;
     }
@@ -543,9 +543,9 @@
     }
     if(autoRetryTimer){clearTimeout(autoRetryTimer);autoRetryTimer=null;}
     $('analyzeBtn').disabled=true;
-    $('analyzeBtn').textContent='Analizando…';
-    $('signalState').textContent='ANALIZANDO';
-    $('cycleStatus').textContent='Calculando confluencias…';
+    $('analyzeBtn').textContent='Consultando…';
+    $('signalState').textContent='CONSULTANDO';
+    $('cycleStatus').textContent='Consultando publicaciones manuales…';
     try{
       const url=new URL(apiBase,window.location.origin);
       url.searchParams.set('asset',selectedAsset);
@@ -561,7 +561,7 @@
         $('cycleStatus').textContent='Sin confluencia suficiente';
         if(autoEnabled) autoRetryTimer=setTimeout(requestSignal,30000);
       }else{
-        $('analyzeBtn').textContent='Señal emitida';
+        $('analyzeBtn').textContent='Señal publicada';
       }
       await refreshHistory();
     }catch(err){
@@ -608,7 +608,7 @@
     activeSignalExpiry=null;
     executionEntryPrice=null;
     $('analyzeBtn').disabled=false;
-    $('analyzeBtn').textContent='Obtener nueva señal';
+    $('analyzeBtn').textContent='Consultar señal publicada';
     $('entrySchedulePanel').classList.add('hidden');
     $('activeTradePanel').classList.add('hidden');
     $('resultBanner').classList.remove('hidden');
