@@ -276,6 +276,27 @@ def _support_resistance(candles, period=20):
     return min(c['low'] for c in window), max(c['high'] for c in window)
 
 
+def _higher_timeframe_bias(asset, timeframe):
+    """Confirma dirección con una temporalidad superior sin bloquear el análisis si la fuente falla."""
+    higher = 5 if int(timeframe) == 1 else 15 if int(timeframe) == 5 else None
+    if higher is None:
+        return 0
+    try:
+        market = fetch_ohlc(asset, higher, limit=120)
+        closes = [c['close'] for c in market['candles']]
+        ema9 = _ema_series(closes, 9)[-1]
+        ema21 = _ema_series(closes, 21)[-1]
+        ema50 = _ema_series(closes, 50)[-1]
+        price = closes[-1]
+        if price > ema9 > ema21 > ema50:
+            return 1
+        if price < ema9 < ema21 < ema50:
+            return -1
+    except Exception:
+        return 0
+    return 0
+
+
 def _current_market_price(asset):
     """Obtiene una cotización fresca cuando la entrada/salida se procesa a tiempo."""
     meta = ASSETS[asset]
@@ -452,6 +473,13 @@ def analyze_market(asset, timeframe):
         score *= .86
         reasons.append('Volatilidad alta: señal penalizada')
 
+    higher_bias = _higher_timeframe_bias(asset, timeframe)
+    if higher_bias and score:
+        if (score > 0 and higher_bias > 0) or (score < 0 and higher_bias < 0):
+            score += .8 if score > 0 else -.8
+        else:
+            score *= .82
+
     candle_age = max(0, int(time.time()) - int(candles[-1]['time']))
     stale_limit = max(180, int(timeframe) * 180)
     market_fresh = meta['category'] == 'Cripto' or candle_age <= stale_limit
@@ -505,6 +533,7 @@ def analyze_market(asset, timeframe):
         'atr_pct': round(atr_pct, 3),
         'volume_ratio': round(volume_ratio, 2),
         'risk_pct': risk_pct,
+        'higher_timeframe_bias': higher_bias,
         'market_fresh': market_fresh,
         'last_candle_at': candles[-1]['time'],
         'reasons': reasons[:6],
