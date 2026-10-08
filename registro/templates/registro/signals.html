@@ -154,6 +154,37 @@
           <div id="signalReasons" class="signal-reasons"></div>
         </div>
 
+        <div id="signalTicket" class="signal-ticket hidden" aria-live="polite">
+          <div class="signal-ticket-head">
+            <span>SEÑAL OPERATIVA</span>
+            <b id="ticketPhaseBadge">PROGRAMADA</b>
+          </div>
+          <div class="signal-ticket-body">
+            <strong id="ticketAsset">EUR/USD</strong>
+            <strong id="ticketDirection" class="ticket-direction">CALL ↑</strong>
+            <div class="ticket-spacer"></div>
+            <div>Calidad: <b id="ticketQuality">ALTA</b></div>
+            <div>Confluencia: <b id="ticketConfidence">84/100</b></div>
+            <div class="ticket-spacer"></div>
+            <div>Señal emitida: <b id="ticketIssuedAt">—</b></div>
+            <div>ENTRA EN: <b id="ticketEntryCountdown">01:00</b></div>
+            <div>Entrada: <b id="ticketEntryAt">—</b></div>
+            <div>Vence: <b id="ticketExpiresAt">—</b></div>
+            <div id="ticketRunningBlock" class="ticket-running hidden">
+              <div class="ticket-divider"></div>
+              <strong>SEÑAL EN CURSO</strong>
+              <div>Precio entrada: <b id="ticketEntryPrice">—</b></div>
+              <div>Tiempo restante: <b id="ticketRemaining">—</b></div>
+            </div>
+            <div id="ticketResultBlock" class="ticket-result hidden">
+              <div class="ticket-divider"></div>
+              <strong id="ticketResultTitle">✅ SEÑAL GANADORA</strong>
+              <div>Entrada: <b id="ticketResultEntry">—</b></div>
+              <div>Salida: <b id="ticketResultExit">—</b></div>
+            </div>
+          </div>
+        </div>
+
         <div id="resultBanner" class="result-banner hidden" aria-live="polite">
           <div id="resultIcon" class="result-icon">✓</div>
           <div>
@@ -420,8 +451,15 @@
     $('liveSignalPanel').classList.remove('hidden');
     $('resultBanner').classList.add('hidden');
     $('signalAsset').textContent=s.asset+' · '+s.timeframe+' min';
+    $('signalTicket').classList.remove('hidden');
+    $('ticketAsset').textContent=s.asset;
+    $('ticketDirection').textContent=s.direction==='CALL'?'CALL ↑':s.direction==='PUT'?'PUT ↓':'ESPERAR';
+    $('ticketDirection').className='ticket-direction '+(s.direction==='CALL'?'call':s.direction==='PUT'?'put':'wait');
+    $('ticketConfidence').textContent=s.confidence+'/100';
     $('signalConfidence').textContent=s.confidence+'/100';
-    $('signalQuality').textContent=a.quality|| (s.confidence>=80?'ALTA':s.confidence>=68?'MEDIA':'OBSERVACIÓN');
+    const quality=a.quality|| (s.confidence>=80?'ALTA':s.confidence>=68?'MEDIA':'OBSERVACIÓN');
+    $('signalQuality').textContent=quality;
+    $('ticketQuality').textContent=quality;
     $('signalQuality').className='quality-badge '+(s.confidence>=80?'high':s.confidence>=68?'medium':'watch');
     $('signalStrategy').textContent=s.strategy;
     $('referencePrice').textContent=fmtPrice(s.entry_price);
@@ -446,6 +484,9 @@
     $('issuedAt').textContent=fmtTime(s.generated_at);
     $('entryAt').textContent=fmtTime(s.scheduled_entry_at);
     $('expiresAt').textContent=fmtTime(s.expires_at);
+    $('ticketIssuedAt').textContent=fmtTime(s.generated_at);
+    $('ticketEntryAt').textContent=fmtTime(s.scheduled_entry_at);
+    $('ticketExpiresAt').textContent=fmtTime(s.expires_at);
     syncPhase(s.phase);
     updateClocks();
   }
@@ -456,12 +497,19 @@
       $('entrySchedulePanel').classList.remove('hidden');
       $('activeTradePanel').classList.add('hidden');
       $('cycleStatus').textContent=phase==='activating'?'Capturando precio de entrada…':'Señal entregada · entrada en 60 s';
+      $('ticketPhaseBadge').textContent=phase==='activating'?'INICIANDO':'PROGRAMADA';
+      $('ticketRunningBlock').classList.add('hidden');
+      $('ticketResultBlock').classList.add('hidden');
     }else if(phase==='active'){
       $('entrySchedulePanel').classList.add('hidden');
       $('activeTradePanel').classList.remove('hidden');
       $('signalState').textContent='EN CURSO';
       $('cycleStatus').textContent='Operación en curso';
       $('entryPrice').textContent=fmtPrice(executionEntryPrice);
+      $('ticketPhaseBadge').textContent='EN CURSO';
+      $('ticketRunningBlock').classList.remove('hidden');
+      $('ticketResultBlock').classList.add('hidden');
+      $('ticketEntryPrice').textContent=fmtPrice(executionEntryPrice);
     }
   }
 
@@ -470,18 +518,22 @@
     if(activeSignalOpen&&scheduledEntryAt&&now<scheduledEntryAt){
       const seconds=(scheduledEntryAt-now)/1000;
       $('entryCountdown').textContent=fmtCountdown(seconds);
+      $('ticketEntryCountdown').textContent=fmtCountdown(seconds);
       const elapsed=Math.max(0,60-seconds);
       $('entryRing').style.setProperty('--progress',Math.min(360,elapsed/60*360)+'deg');
       $('scheduledEntryText').textContent='Entrada en '+fmtCountdown(seconds);
     }else if(activeSignalOpen&&scheduledEntryAt&&!executionEntryPrice){
       $('entryCountdown').textContent='00:00';
+      $('ticketEntryCountdown').textContent='00:00';
       $('entryRing').style.setProperty('--progress','360deg');
       $('scheduledEntryText').textContent='Capturando precio de entrada…';
     }
 
     if(activeSignalOpen&&executionEntryPrice&&activeSignalExpiry){
       const seconds=Math.max(0,(activeSignalExpiry-now)/1000);
-      $('signalExpiry').textContent=seconds>0?fmtCountdown(seconds):'VERIFICANDO…';
+      const remainingText=seconds>0?fmtCountdown(seconds):'VERIFICANDO…';
+      $('signalExpiry').textContent=remainingText;
+      $('ticketRemaining').textContent=remainingText;
     }
   }
   setInterval(updateClocks,500);
@@ -571,6 +623,12 @@
       $('resultIcon').textContent='='; $('resultTitle').textContent='SEÑAL EN EMPATE';
     }
     $('resultText').textContent=item.asset+' · entrada '+fmtPrice(item.execution_entry_price)+' · salida '+fmtPrice(item.exit_price);
+    $('ticketPhaseBadge').textContent='CERRADA';
+    $('ticketRunningBlock').classList.add('hidden');
+    $('ticketResultBlock').classList.remove('hidden');
+    $('ticketResultTitle').textContent=item.outcome==='win'?'✅ SEÑAL GANADORA':item.outcome==='loss'?'❌ SEÑAL PERDEDORA':'➖ SEÑAL EN EMPATE';
+    $('ticketResultEntry').textContent=fmtPrice(item.execution_entry_price);
+    $('ticketResultExit').textContent=fmtPrice(item.exit_price);
     $('signalState').textContent='CERRADA';
     $('signalState').className='signal-state wait';
     $('cycleStatus').textContent=autoEnabled?'Resultado verificado · preparando nueva señal':'Resultado verificado';
