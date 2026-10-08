@@ -14,3 +14,7 @@ services:
         value: "7306800842"
       - key: SIGNAL_REFERENCE_PAYOUT
         value: "75"
+      - key: SIGNAL_BACKGROUND_WORKER
+        value: "1"
+      - key: SIGNAL_WORKER_INTERVAL
+        value: "2"
