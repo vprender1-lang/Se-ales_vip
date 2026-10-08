@@ -5,8 +5,8 @@
   <section class="container pro-topbar">
     <div>
       <span class="section-kicker">MOTOR PRIVADO · ID #{{ registration.quotex_id }}</span>
-      <h1>Señal ahora. <em>Entrada en 60 segundos.</em></h1>
-      <p>La dirección se entrega inmediatamente. La operación empieza exactamente un minuto después, toma el precio de entrada al iniciar y se verifica automáticamente al vencer.</p>
+      <h1>Señales publicadas. <em>Horarios de operación.</em></h1>
+      <p>Solo se muestran las señales que publique el administrador, con su hora de entrada y vencimiento.</p>
     </div>
     <form method="post" action="{% url 'registro:vip_logout' %}">
       {% csrf_token %}
@@ -72,7 +72,7 @@
         </div>
       </div>
 
-      <div class="auto-mode-row">
+      <div class="auto-mode-row" style="display:none">
         <div><b>Modo automático</b><small>Al cerrar una señal prepara la siguiente.</small></div>
         <label class="auto-switch">
           <input id="autoMode" type="checkbox" checked>
@@ -98,8 +98,8 @@
           <div class="empty-signal-icon">↗</div>
           <div>
             <small>LISTO PARA ANALIZAR</small>
-            <h3>La señal aparece inmediatamente</h3>
-            <p>Después tendrás 60 segundos para prepararte antes de que el motor capture el precio de entrada.</p>
+            <h3>Las señales aparecen cuando las publique el administrador</h3>
+            <p>Consulta aquí las operaciones publicadas manualmente y sus horarios exactos.</p>
           </div>
         </div>
 
@@ -322,7 +322,7 @@
 
   <section class="container transparency-card pro-transparency">
     <div><span class="section-kicker">TRANSPARENCIA</span><h3>Cómo se mide el resultado</h3></div>
-    <p>La señal se publica primero. Sesenta segundos después se captura el precio de entrada de la fuente externa. Desde ahí corre la duración elegida. Al vencer se compara el precio final con el de entrada para clasificarla como ganadora, perdedora o empate. Puede existir diferencia frente a la cotización de Quotex.</p>
+    <p>Las señales y sus horarios los publica el administrador. Los resultados solamente se muestran cuando se registran manualmente con datos verificables. No se ejecutan operaciones en Quotex desde este sitio.</p>
   </section>
 </main>
 {% endblock %}
@@ -332,7 +332,7 @@
 (() => {
   let selectedAsset = "{{ assets.0|escapejs }}";
   let selectedTimeframe = 1;
-  let autoEnabled = true;
+  let autoEnabled = false;
   let activeSignalId = null;
   let activeSignalOpen = false;
   let signalGeneratedAt = null;
@@ -428,10 +428,8 @@
     historySignature=''; refreshHistory();
   }));
 
-  $('autoMode').addEventListener('change',e=>{
-    autoEnabled=e.target.checked;
-    $('cycleStatus').textContent=autoEnabled?'Modo automático activo':'Modo automático pausado';
-  });
+  $('autoMode').checked=false;
+  $('autoMode').disabled=true;
 
   function setDirection(s){
     if(s.direction==='CALL'){
@@ -631,7 +629,7 @@
     $('ticketResultExit').textContent=fmtPrice(item.exit_price);
     $('signalState').textContent='CERRADA';
     $('signalState').className='signal-state wait';
-    $('cycleStatus').textContent=autoEnabled?'Resultado verificado · preparando nueva señal':'Resultado verificado';
+    $('cycleStatus').textContent='Resultado registrado por el administrador';
     if(autoEnabled) autoRetryTimer=setTimeout(requestSignal,2500);
   }
 
@@ -724,7 +722,10 @@
   refreshHistory();
   refreshSupport();
   setInterval(refreshSupport,5000);
+  $('analyzeBtn').textContent='Consultar señal publicada';
+  $('cycleStatus').textContent='Esperando señal del administrador';
   setTimeout(requestSignal,700);
+  setInterval(() => { if(!activeSignalOpen) requestSignal(); }, 15000);
 })();
 </script>
 {% endblock %}
