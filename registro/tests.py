@@ -132,3 +132,39 @@ class SignalLifecycleTests(TestCase):
         self.assertEqual(second['activated'], 0)
         self.assertEqual(second['evaluated'], 0)
         self.assertEqual(signal.outcome, Signal.Outcome.WIN)
+
+
+    @patch('registro.signal_engine._market_price_at')
+    def test_pending_signal_retries_after_temporary_market_error(self, market_price):
+        from registro.signal_engine import MarketDataError
+
+        now = timezone.now()
+        signal = Signal.objects.create(
+            asset='EUR/USD',
+            timeframe=1,
+            strategy='Tendencia EMA + MACD',
+            direction=Signal.Direction.CALL,
+            score=5.6,
+            confidence=86,
+            entry_price=Decimal('1.10000'),
+            scheduled_entry_at=now - timedelta(seconds=5),
+            expires_at=now + timedelta(seconds=55),
+            source='Test market',
+        )
+
+        market_price.side_effect = [
+            MarketDataError('fallo temporal'),
+            (Decimal('1.10050'), 'Test market'),
+        ]
+
+        first = process_signal_states(limit=10)
+        signal.refresh_from_db()
+        self.assertEqual(first['activated'], 0)
+        self.assertEqual(first['errors'], 1)
+        self.assertIsNone(signal.execution_entry_price)
+
+        second = process_signal_states(limit=10)
+        signal.refresh_from_db()
+        self.assertEqual(second['activated'], 1)
+        self.assertEqual(signal.execution_entry_price, Decimal('1.10050'))
+        self.assertIsNotNone(signal.activated_at)
