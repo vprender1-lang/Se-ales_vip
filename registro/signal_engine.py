@@ -710,6 +710,8 @@ def public_signal_dict(signal, analysis=None):
             phase = 'closed'
         elif signal.scheduled_entry_at and now < signal.scheduled_entry_at:
             phase = 'scheduled'
+        elif signal.is_manual:
+            phase = 'active' if now < signal.expires_at else 'awaiting_result'
         elif signal.execution_entry_price is not None:
             phase = 'active'
         else:
