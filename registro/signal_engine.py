@@ -15,7 +15,10 @@ from .models import Signal
 
 KRAKEN_URL = 'https://api.kraken.com/0/public/OHLC'
 KRAKEN_TICKER_URL = 'https://api.kraken.com/0/public/Ticker'
-YAHOO_URL = 'https://query2.finance.yahoo.com/v8/finance/chart/{symbol}'
+YAHOO_URLS = (
+    'https://query2.finance.yahoo.com/v8/finance/chart/{symbol}',
+    'https://query1.finance.yahoo.com/v8/finance/chart/{symbol}',
+)
 TIMEFRAMES = (1, 5, 15)
 SIGNAL_ENTRY_DELAY_SECONDS = 60
 
@@ -135,12 +138,29 @@ def _fetch_yahoo(symbol, timeframe, limit):
         'includePrePost': 'false',
         'events': 'div,splits',
     })
-    req = urllib.request.Request(
-        f"{YAHOO_URL.format(symbol=urllib.parse.quote(symbol, safe='^=-'))}?{query}",
-        headers={'User-Agent': 'Mozilla/5.0 SenalesVIPLatino/3.0', 'Accept': 'application/json'},
-    )
-    with urllib.request.urlopen(req, timeout=8) as response:
-        payload = json.loads(response.read().decode('utf-8'))
+
+    last_error = None
+    payload = None
+    for base_url in YAHOO_URLS:
+        try:
+            req = urllib.request.Request(
+                f"{base_url.format(symbol=urllib.parse.quote(symbol, safe='^=-'))}?{query}",
+                headers={
+                    'User-Agent': 'Mozilla/5.0 SenalesVIPLatino/4.1',
+                    'Accept': 'application/json',
+                    'Cache-Control': 'no-cache',
+                },
+            )
+            with urllib.request.urlopen(req, timeout=7) as response:
+                payload = json.loads(response.read().decode('utf-8'))
+            if payload:
+                break
+        except Exception as exc:
+            last_error = exc
+            payload = None
+
+    if not payload:
+        raise MarketDataError(f'La fuente de mercado no respondió: {last_error}')
 
     chart = payload.get('chart') or {}
     if chart.get('error'):
@@ -162,17 +182,17 @@ def _fetch_yahoo(symbol, timeframe, limit):
     candles = []
     for i, ts in enumerate(timestamps):
         try:
-            o, h, l, c = opens[i], highs[i], lows[i], closes[i]
+            o, h, l, close = opens[i], highs[i], lows[i], closes[i]
         except IndexError:
             continue
-        if None in (o, h, l, c):
+        if None in (o, h, l, close):
             continue
         candles.append({
             'time': int(ts),
             'open': float(o),
             'high': float(h),
             'low': float(l),
-            'close': float(c),
+            'close': float(close),
             'volume': float(volumes[i]) if i < len(volumes) and volumes[i] is not None else 0,
         })
     return candles[-limit:]
@@ -204,8 +224,13 @@ def fetch_ohlc(asset='EUR/USD', timeframe=1, limit=220, fresh=False):
                 candles = _fetch_yahoo(fallback, timeframe, limit)
                 source = 'Yahoo Finance public chart data'
     else:
-        candles = _fetch_yahoo(meta['symbol'], timeframe, limit)
-        source = 'Yahoo Finance public chart data'
+        try:
+            candles = _fetch_yahoo(meta['symbol'], timeframe, limit)
+            source = 'Yahoo Finance public chart data'
+        except MarketDataError:
+            raise
+        except Exception as exc:
+            raise MarketDataError(f'No se pudo consultar {asset}: {exc}') from exc
 
     if not candles or len(candles) < 55:
         raise MarketDataError('Aún no hay suficientes velas para calcular una señal fiable.')
@@ -332,20 +357,25 @@ def _current_market_price(asset):
 
 def _historical_market_price(asset, target_dt):
     """Recupera el precio más cercano sin usar una vela futura al momento objetivo."""
-    market = fetch_ohlc(asset, 1, limit=300, fresh=True)
-    candles = market['candles']
-    target_ts = int(target_dt.timestamp())
+    try:
+        market = fetch_ohlc(asset, 1, limit=300, fresh=True)
+        candles = market['candles']
+        target_ts = int(target_dt.timestamp())
 
-    past = [c for c in candles if int(c['time']) <= target_ts]
-    if past:
-        chosen = max(past, key=lambda c: int(c['time']))
-    else:
-        chosen = min(candles, key=lambda c: abs(int(c['time']) - target_ts))
+        past = [c for c in candles if int(c['time']) <= target_ts]
+        if past:
+            chosen = max(past, key=lambda c: int(c['time']))
+        else:
+            chosen = min(candles, key=lambda c: abs(int(c['time']) - target_ts))
 
-    distance = abs(int(chosen['time']) - target_ts)
-    if distance > 180:
-        raise MarketDataError('No hay una cotización suficientemente cercana al momento de la señal.')
-    return Decimal(str(chosen['close'])), market['source']
+        distance = abs(int(chosen['time']) - target_ts)
+        if distance > 180:
+            raise MarketDataError('No hay una cotización suficientemente cercana al momento de la señal.')
+        return Decimal(str(chosen['close'])), market['source']
+    except MarketDataError:
+        raise
+    except Exception as exc:
+        raise MarketDataError(f'No fue posible reconstruir la cotización: {exc}') from exc
 
 
 def _market_price_at(asset, target_dt):
@@ -596,7 +626,7 @@ def process_signal_states(limit=100):
     for signal in pending:
         try:
             price, source = _market_price_at(signal.asset, signal.scheduled_entry_at)
-        except MarketDataError:
+        except Exception:
             errors += 1
             continue
 
@@ -623,7 +653,7 @@ def process_signal_states(limit=100):
     for signal in due:
         try:
             exit_price, _ = _market_price_at(signal.asset, signal.expires_at)
-        except MarketDataError:
+        except Exception:
             errors += 1
             continue
 
