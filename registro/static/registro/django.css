@@ -110,3 +110,26 @@
 .pro-metrics-4{grid-template-columns:repeat(4,1fr);margin-top:12px}
 .engine-card{padding:18px}.engine-badge{font-size:.5rem;letter-spacing:.08em;padding:5px 7px;border-radius:999px;border:1px solid rgba(79,209,255,.14);color:#75cce8;background:rgba(79,209,255,.045)}.engine-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin:14px 0}.engine-grid span{padding:8px;border:1px solid var(--line);border-radius:9px;font-size:.61rem;color:#8ca1b1;background:rgba(255,255,255,.015)}.engine-card p{margin:0;color:#647c8f;font-size:.63rem;line-height:1.5}
 @media(max-width:680px){.entry-schedule-panel{grid-template-columns:1fr;text-align:center}.entry-ring{margin:0 auto}.entry-times{grid-template-columns:1fr}.pro-metrics-4{grid-template-columns:repeat(2,1fr)}.empty-signal-panel{grid-template-columns:1fr;text-align:center}.empty-signal-icon{margin:0 auto}.active-trade-status{align-items:flex-start;flex-direction:column}}
+
+
+/* ===== Ticket operativo exacto ===== */
+.signal-ticket{margin:18px 0;border:1px solid rgba(245,196,81,.22);border-radius:18px;background:linear-gradient(180deg,rgba(7,18,29,.98),rgba(11,27,42,.98));overflow:hidden}
+.signal-ticket-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(245,196,81,.04)}
+.signal-ticket-head span{font-size:.58rem;letter-spacing:.14em;color:#71889a;font-weight:800}
+.signal-ticket-head b{font-size:.58rem;letter-spacing:.09em;color:var(--gold);padding:5px 7px;border-radius:999px;border:1px solid rgba(245,196,81,.18);background:rgba(245,196,81,.05)}
+.signal-ticket-body{padding:18px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#d8e2e9;font-size:.82rem;line-height:1.75}
+.signal-ticket-body>strong{display:block}.signal-ticket-body>strong:first-child{font-size:1.05rem;color:#fff}.ticket-direction{font-size:1.45rem!important;line-height:1.2;margin:2px 0 4px}.ticket-direction.call{color:var(--green)}.ticket-direction.put{color:#ff7f8d}.ticket-direction.wait{color:var(--gold)}
+.signal-ticket-body b{color:#fff}.ticket-spacer{height:8px}.ticket-divider{height:1px;background:rgba(255,255,255,.08);margin:12px 0}
+.ticket-running>strong{display:block;color:#7be0a8;margin-bottom:4px}.ticket-result>strong{display:block;margin-bottom:4px}.ticket-result{margin-top:4px}
+
+/* ===== 100 traders DEMO ===== */
+.demo-warning{margin:12px 0;padding:9px 10px;border-radius:10px;border:1px solid rgba(245,196,81,.18);background:rgba(245,196,81,.045);color:#d6bf7c;font-size:.58rem;font-weight:900;letter-spacing:.07em;text-align:center}
+.demo-traders-section{margin-top:18px;padding:22px}
+.demo-table-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:16px}.demo-table-head h2{margin:4px 0 5px;font-size:1.35rem}.demo-table-head p{margin:0;max-width:760px;color:#7890a2;font-size:.72rem}.demo-pill{font-size:.56rem;letter-spacing:.09em;color:#d8be72;padding:7px 9px;border-radius:999px;border:1px solid rgba(245,196,81,.18);background:rgba(245,196,81,.05);white-space:nowrap}
+.demo-table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px;max-height:620px}
+.demo-traders-table{width:100%;border-collapse:collapse;min-width:860px;font-size:.69rem}
+.demo-traders-table thead th{position:sticky;top:0;z-index:2;text-align:left;padding:10px 11px;background:#0d2132;color:#6f8799;font-size:.56rem;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--line)}
+.demo-traders-table tbody td{padding:9px 11px;border-bottom:1px solid rgba(255,255,255,.045);color:#9db0bd;vertical-align:middle}
+.demo-traders-table tbody tr:hover{background:rgba(255,255,255,.018)}
+.demo-traders-table td strong{color:#e7edf2}.demo-traders-table td small{display:block;font-size:.5rem;color:#667d8e;margin-top:2px}.demo-traders-table .demo-gain{color:var(--green);font-weight:900}.demo-traders-table .demo-gain small{display:inline;color:#6d8596;font-weight:500;margin-left:3px}
+@media(max-width:680px){.demo-table-head{flex-direction:column}.signal-ticket-body{font-size:.76rem}.signal-ticket{margin-top:14px}}
