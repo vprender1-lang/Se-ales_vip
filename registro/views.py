@@ -262,12 +262,7 @@ def signals_dashboard(request):
         messages.info(request, 'Ingresa tu ID de Quotex aprobado para acceder al motor.')
         return redirect('registro:vip_login')
 
-    try:
-        process_signal_states(limit=24)
-    except Exception:
-        pass
-
-    closed = Signal.objects.exclude(outcome=Signal.Outcome.OPEN)
+    closed = Signal.objects.filter(is_manual=True).exclude(outcome=Signal.Outcome.OPEN)
     summary = closed.aggregate(
         total=Count('id'),
         wins=Count('id', filter=Q(outcome=Signal.Outcome.WIN)),
@@ -308,24 +303,21 @@ def signal_api(request):
     if asset not in ASSETS or timeframe not in TIMEFRAMES:
         return JsonResponse({'ok': False, 'error': 'Activo o temporalidad no soportados.'}, status=400)
 
-    try:
-        process_signal_states(limit=24)
-        signal, analysis = get_or_create_signal(asset, timeframe)
-    except MarketDataError as exc:
-        return JsonResponse({'ok': False, 'error': str(exc)}, status=503)
-    except Exception:
-        return JsonResponse({'ok': False, 'error': 'No fue posible calcular la señal en este momento.'}, status=503)
-
+    # Solo consulta señales que el administrador publicó en Django Admin.
+    # Esta API nunca crea ni calcula nuevas señales.
+    signal = (Signal.objects.filter(is_manual=True, asset=asset, timeframe=timeframe)
+              .order_by('-scheduled_entry_at', '-id').first())
+    if not signal:
+        return JsonResponse({
+            'ok': True, 'signal': None,
+            'notice': 'No hay señales manuales publicadas para esta selección.',
+            'reference_payout': settings.SIGNAL_REFERENCE_PAYOUT,
+        })
     return JsonResponse({
         'ok': True,
-        'signal': public_signal_dict(signal, analysis),
+        'signal': public_signal_dict(signal),
         'reference_payout': settings.SIGNAL_REFERENCE_PAYOUT,
-        'notice': (
-            'La señal se emite ahora y su entrada queda programada 60 segundos después. '
-            'El precio de ejecución se captura al comenzar la señal y el resultado se mide al vencer. '
-            'Las cotizaciones vienen de fuentes públicas externas y pueden diferir de Quotex. '
-            f'El {settings.SIGNAL_REFERENCE_PAYOUT}% es payout de referencia, no una rentabilidad garantizada.'
-        ),
+        'notice': 'Señal programada manualmente por el administrador. Los horarios son los publicados; no hay ejecución automática en Quotex.',
     })
 
 
@@ -335,18 +327,13 @@ def signal_history_api(request):
     if not registration:
         return JsonResponse({'ok': False, 'error': 'Sesión VIP expirada.'}, status=401)
 
-    try:
-        process_signal_states(limit=100)
-    except Exception:
-        pass
-
     asset = (request.GET.get('asset') or '').strip()
     try:
         timeframe = int(request.GET.get('timeframe', '0') or 0)
     except ValueError:
         timeframe = 0
 
-    qs = Signal.objects.all()
+    qs = Signal.objects.filter(is_manual=True)
     if asset in ASSETS:
         qs = qs.filter(asset=asset)
     if timeframe in TIMEFRAMES:
