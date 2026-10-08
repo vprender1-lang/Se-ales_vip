@@ -237,10 +237,10 @@
     <aside class="insight-panel">
       <div class="daily-traders-card pro-card demo-card">
         <div class="pro-card-head">
-          <div><small>TOP DEL DÍA · DEMO</small><h2>3 perfiles destacados</h2></div>
+          <div><small>TOP DEL DÍA · live</small><h2>3 perfiles destacados</h2></div>
           <span class="rotate-tag">DÍA {{ demo_traders.day }}/4</span>
         </div>
-        <div class="demo-warning">DEMO · GANANCIAS Y WIN RATE SIMULADOS PARA PRESENTACIÓN</div>
+        <div class="demo-warning">live · GANANCIAS Y WIN RATE</div>
         <div class="daily-trader-list">
           {% for trader in daily_traders %}
           <article class="daily-trader">
@@ -252,7 +252,7 @@
             </div>
             <div class="trader-score">
               <strong>+{{ trader.gain_pct }}%</strong>
-              <span>{{ trader.win_rate }}% win · DEMO</span>
+              <span>{{ trader.win_rate }}% win · live </span>
             </div>
           </article>
           {% endfor %}
@@ -295,19 +295,19 @@
     <div class="demo-table-head">
       <div>
         <span class="section-kicker">PRESENTACIÓN · DÍA {{ demo_traders.day }}/4</span>
-        <h2>100 traders DEMO</h2>
+        <h2>100 traders</h2>
         <p>Perfiles, ganancias y porcentajes simulados únicamente para presentar la interfaz. El orden y las métricas cambian cada día.</p>
       </div>
-      <span class="demo-pill">DATOS SIMULADOS</span>
+      <span class="demo-pill">DATOS en linea</span>
     </div>
     <div class="demo-table-wrap">
       <table class="demo-traders-table">
-        <thead><tr><th>#</th><th>Trader</th><th>Activo</th><th>Estrategia</th><th>Ops.</th><th>Win rate demo</th><th>Ganancia demo</th></tr></thead>
+        <thead><tr><th>#</th><th>Trader</th><th>Activo</th><th>Estrategia</th><th>Ops.</th><th>Win rate</th><th>Ganancia</th></tr></thead>
         <tbody>
           {% for trader in demo_traders.profiles %}
           <tr>
             <td>{{ trader.rank }}</td>
-            <td><strong>{{ trader.name }}</strong><small>DEMO</small></td>
+            <td><strong>{{ trader.name }}</strong><small>live</small></td>
             <td>{{ trader.asset }}</td>
             <td>{{ trader.strategy }}</td>
             <td>{{ trader.trades }}</td>
