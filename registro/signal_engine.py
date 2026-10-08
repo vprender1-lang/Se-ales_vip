@@ -14,6 +14,7 @@ from .models import Signal
 
 
 KRAKEN_URL = 'https://api.kraken.com/0/public/OHLC'
+KRAKEN_TICKER_URL = 'https://api.kraken.com/0/public/Ticker'
 YAHOO_URL = 'https://query2.finance.yahoo.com/v8/finance/chart/{symbol}'
 TIMEFRAMES = (1, 5, 15)
 SIGNAL_ENTRY_DELAY_SECONDS = 60
@@ -177,7 +178,7 @@ def _fetch_yahoo(symbol, timeframe, limit):
     return candles[-limit:]
 
 
-def fetch_ohlc(asset='EUR/USD', timeframe=1, limit=220):
+def fetch_ohlc(asset='EUR/USD', timeframe=1, limit=220, fresh=False):
     if asset not in ASSETS:
         raise MarketDataError('Activo no soportado.')
     if int(timeframe) not in TIMEFRAMES:
@@ -185,7 +186,7 @@ def fetch_ohlc(asset='EUR/USD', timeframe=1, limit=220):
 
     timeframe = int(timeframe)
     key = ('ohlc-v3', asset, timeframe)
-    cached = _cached(key, max(8, min(25, timeframe * 4)))
+    cached = None if fresh else _cached(key, max(8, min(25, timeframe * 4)))
     if cached:
         return cached
 
@@ -275,15 +276,69 @@ def _support_resistance(candles, period=20):
     return min(c['low'] for c in window), max(c['high'] for c in window)
 
 
-def _market_price_at(asset, target_dt):
-    market = fetch_ohlc(asset, 1, limit=300)
+def _current_market_price(asset):
+    """Obtiene una cotización fresca cuando la entrada/salida se procesa a tiempo."""
+    meta = ASSETS[asset]
+
+    if meta['provider'] == 'kraken':
+        query = urllib.parse.urlencode({'pair': meta['symbol']})
+        req = urllib.request.Request(
+            f'{KRAKEN_TICKER_URL}?{query}',
+            headers={'User-Agent': 'SenalesVIPLatino/4.0'},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=6) as response:
+                payload = json.loads(response.read().decode('utf-8'))
+            result = payload.get('result') or {}
+            pair_key = next(iter(result), None)
+            if pair_key:
+                close_values = result[pair_key].get('c') or []
+                if close_values:
+                    return Decimal(str(close_values[0])), 'Kraken Public Market Data'
+        except Exception:
+            pass
+
+    try:
+        market = fetch_ohlc(asset, 1, limit=120, fresh=True)
+        candles = market['candles']
+        if candles:
+            return Decimal(str(candles[-1]['close'])), market['source']
+    except Exception:
+        pass
+
+    raise MarketDataError('No fue posible obtener una cotización fresca.')
+
+
+def _historical_market_price(asset, target_dt):
+    """Recupera el precio más cercano sin usar una vela futura al momento objetivo."""
+    market = fetch_ohlc(asset, 1, limit=300, fresh=True)
     candles = market['candles']
     target_ts = int(target_dt.timestamp())
-    nearest = min(candles, key=lambda c: abs(int(c['time']) - target_ts))
-    distance = abs(int(nearest['time']) - target_ts)
+
+    past = [c for c in candles if int(c['time']) <= target_ts]
+    if past:
+        chosen = max(past, key=lambda c: int(c['time']))
+    else:
+        chosen = min(candles, key=lambda c: abs(int(c['time']) - target_ts))
+
+    distance = abs(int(chosen['time']) - target_ts)
     if distance > 180:
         raise MarketDataError('No hay una cotización suficientemente cercana al momento de la señal.')
-    return Decimal(str(nearest['close'])), market['source']
+    return Decimal(str(chosen['close'])), market['source']
+
+
+def _market_price_at(asset, target_dt):
+    """
+    Si el motor procesa el evento cerca de su hora exacta usa una cotización fresca.
+    Si llega tarde tras un reinicio, reconstruye el precio con histórico de 1 minuto.
+    """
+    lag_seconds = abs((timezone.now() - target_dt).total_seconds())
+    if lag_seconds <= 20:
+        try:
+            return _current_market_price(asset)
+        except MarketDataError:
+            pass
+    return _historical_market_price(asset, target_dt)
 
 
 def analyze_market(asset, timeframe):
@@ -491,9 +546,14 @@ def get_or_create_signal(asset, timeframe):
 
 
 def process_signal_states(limit=100):
+    """
+    Avanza el ciclo de todas las señales abiertas de forma idempotente.
+    Puede ejecutarse desde la API y desde el worker sin duplicar activaciones/cierres.
+    """
     now = timezone.now()
     activated = 0
     evaluated = 0
+    errors = 0
 
     pending = list(
         Signal.objects.filter(
@@ -503,18 +563,26 @@ def process_signal_states(limit=100):
             activated_at__isnull=True,
         ).order_by('scheduled_entry_at')[:limit]
     )
+
     for signal in pending:
         try:
             price, source = _market_price_at(signal.asset, signal.scheduled_entry_at)
         except MarketDataError:
+            errors += 1
             continue
-        signal.execution_entry_price = price
-        signal.activated_at = now
-        if source:
-            signal.source = source
-        signal.save(update_fields=['execution_entry_price', 'activated_at', 'source'])
-        activated += 1
 
+        updated = Signal.objects.filter(
+            pk=signal.pk,
+            outcome=Signal.Outcome.OPEN,
+            activated_at__isnull=True,
+        ).update(
+            execution_entry_price=price,
+            activated_at=timezone.now(),
+            source=source or signal.source,
+        )
+        activated += int(bool(updated))
+
+    now = timezone.now()
     due = list(
         Signal.objects.filter(
             outcome=Signal.Outcome.OPEN,
@@ -522,10 +590,12 @@ def process_signal_states(limit=100):
             expires_at__lte=now,
         ).order_by('expires_at')[:limit]
     )
+
     for signal in due:
         try:
             exit_price, _ = _market_price_at(signal.asset, signal.expires_at)
         except MarketDataError:
+            errors += 1
             continue
 
         entry = signal.execution_entry_price
@@ -536,13 +606,18 @@ def process_signal_states(limit=100):
         else:
             outcome = Signal.Outcome.WIN if exit_price < entry else Signal.Outcome.LOSS
 
-        signal.exit_price = exit_price
-        signal.outcome = outcome
-        signal.evaluated_at = now
-        signal.save(update_fields=['exit_price', 'outcome', 'evaluated_at'])
-        evaluated += 1
+        updated = Signal.objects.filter(
+            pk=signal.pk,
+            outcome=Signal.Outcome.OPEN,
+            execution_entry_price__isnull=False,
+        ).update(
+            exit_price=exit_price,
+            outcome=outcome,
+            evaluated_at=timezone.now(),
+        )
+        evaluated += int(bool(updated))
 
-    return {'activated': activated, 'evaluated': evaluated}
+    return {'activated': activated, 'evaluated': evaluated, 'errors': errors}
 
 
 def evaluate_due_signals(limit=50):
