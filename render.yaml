@@ -15,6 +15,6 @@ services:
       - key: SIGNAL_REFERENCE_PAYOUT
         value: "75"
       - key: SIGNAL_BACKGROUND_WORKER
-        value: "1"
+        value: "0"
       - key: SIGNAL_WORKER_INTERVAL
         value: "2"
