@@ -101,3 +101,34 @@ class SignalLifecycleTests(TestCase):
         process_signal_states(limit=10)
         signal.refresh_from_db()
         self.assertEqual(signal.outcome, Signal.Outcome.LOSS)
+
+
+    @patch('registro.signal_engine._market_price_at')
+    def test_processing_same_closed_signal_twice_is_idempotent(self, market_price):
+        now = timezone.now()
+        signal = Signal.objects.create(
+            asset='BTC/USD',
+            timeframe=1,
+            strategy='Confluencia técnica',
+            direction=Signal.Direction.CALL,
+            score=5.4,
+            confidence=85,
+            entry_price=Decimal('100.00000000'),
+            scheduled_entry_at=now - timedelta(minutes=2),
+            expires_at=now - timedelta(minutes=1),
+            source='Test market',
+        )
+        market_price.side_effect = [
+            (Decimal('100.00000000'), 'Test market'),
+            (Decimal('101.00000000'), 'Test market'),
+        ]
+
+        first = process_signal_states(limit=10)
+        second = process_signal_states(limit=10)
+        signal.refresh_from_db()
+
+        self.assertEqual(first['activated'], 1)
+        self.assertEqual(first['evaluated'], 1)
+        self.assertEqual(second['activated'], 0)
+        self.assertEqual(second['evaluated'], 0)
+        self.assertEqual(signal.outcome, Signal.Outcome.WIN)
