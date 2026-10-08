@@ -204,24 +204,24 @@
     </section>
 
     <aside class="insight-panel">
-      <div class="daily-traders-card pro-card">
+      <div class="daily-traders-card pro-card demo-card">
         <div class="pro-card-head">
-          <div><small>ESTRATEGIAS DEL DÍA</small><h2>3 perfiles destacados</h2></div>
-          <span class="rotate-tag">ROTAN DIARIO</span>
+          <div><small>TOP DEL DÍA · DEMO</small><h2>3 perfiles destacados</h2></div>
+          <span class="rotate-tag">DÍA {{ demo_traders.day }}/4</span>
         </div>
-        <p class="trader-disclaimer">Son perfiles visuales del motor, no traders reales. Los porcentajes aparecen únicamente cuando hay resultados medidos.</p>
+        <div class="demo-warning">DEMO · GANANCIAS Y WIN RATE SIMULADOS PARA PRESENTACIÓN</div>
         <div class="daily-trader-list">
           {% for trader in daily_traders %}
           <article class="daily-trader">
-            <div class="trader-avatar">{{ trader.name|slice:"7:9"|upper }}</div>
+            <div class="trader-avatar">{{ trader.name|slice:":2"|upper }}</div>
             <div class="trader-info">
               <strong>{{ trader.name }}</strong>
-              <span>{{ trader.strategy }}</span>
-              <small>{{ trader.total }} señales cerradas</small>
+              <span>{{ trader.asset }} · {{ trader.strategy }}</span>
+              <small>{{ trader.trades }} operaciones simuladas</small>
             </div>
             <div class="trader-score">
-              {% if trader.accuracy is not None %}<strong>{{ trader.accuracy }}%</strong>{% else %}<strong>—</strong>{% endif %}
-              <span>{{ trader.label }}</span>
+              <strong>+{{ trader.gain_pct }}%</strong>
+              <span>{{ trader.win_rate }}% win · DEMO</span>
             </div>
           </article>
           {% endfor %}
@@ -258,6 +258,35 @@
         </form>
       </div>
     </aside>
+  </section>
+
+  <section class="container demo-traders-section pro-card">
+    <div class="demo-table-head">
+      <div>
+        <span class="section-kicker">PRESENTACIÓN · DÍA {{ demo_traders.day }}/4</span>
+        <h2>100 traders DEMO</h2>
+        <p>Perfiles, ganancias y porcentajes simulados únicamente para presentar la interfaz. El orden y las métricas cambian cada día.</p>
+      </div>
+      <span class="demo-pill">DATOS SIMULADOS</span>
+    </div>
+    <div class="demo-table-wrap">
+      <table class="demo-traders-table">
+        <thead><tr><th>#</th><th>Trader</th><th>Activo</th><th>Estrategia</th><th>Ops.</th><th>Win rate demo</th><th>Ganancia demo</th></tr></thead>
+        <tbody>
+          {% for trader in demo_traders.profiles %}
+          <tr>
+            <td>{{ trader.rank }}</td>
+            <td><strong>{{ trader.name }}</strong><small>DEMO</small></td>
+            <td>{{ trader.asset }}</td>
+            <td>{{ trader.strategy }}</td>
+            <td>{{ trader.trades }}</td>
+            <td>{{ trader.win_rate }}%</td>
+            <td class="demo-gain">+{{ trader.gain_pct }}% <small>(USD {{ trader.gain_usd }})</small></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </section>
 
   <section class="container transparency-card pro-transparency">
