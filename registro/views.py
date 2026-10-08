@@ -200,28 +200,62 @@ def legacy_signals_dashboard(request, public_id):
     return redirect('registro:signals_dashboard')
 
 
-def daily_trader_profiles():
-    """Tres perfiles visuales que rotan a diario; sus métricas provienen solo del historial real."""
-    strategies = ['Tendencia EMA + MACD', 'Momentum RSI', 'Confluencia técnica']
-    pool = ['Atlas', 'Nova', 'Orion', 'Vega', 'Nexo', 'Pulse', 'Zenith', 'Delta', 'Ares']
-    rng = random.Random(timezone.localdate().isoformat())
-    names = rng.sample(pool, 3)
-    stats = {row['strategy']: row for row in strategy_leaderboard()}
+def demo_trader_profiles():
+    """100 perfiles DEMO para presentación; nunca se presentan como rendimiento real."""
+    first_names = [
+        'Mateo','Santiago','Sebastián','Nicolás','Alejandro','Diego','Gabriel','Samuel','Daniel','David',
+        'Adrián','Lucas','Martín','Leo','Julián','Emilio','Marco','Iván','Bruno','Thiago',
+        'Valentina','Camila','Sofía','Isabella','Lucía','Emma','Victoria','Martina','Daniela','Paula',
+        'Renata','Elena','Sara','Julia','Natalia','Andrea','Mía','Carla','Laura','Mariana'
+    ]
+    last_names = [
+        'Mendoza','Castillo','Morales','Navarro','Rojas','Vargas','Herrera','Romero','Guerrero','Santos',
+        'Pérez','López','Ramírez','Torres','Flores','Rivera','Cruz','Ortiz','Reyes','Gómez'
+    ]
+    strategies = ['Tendencia EMA + MACD','Momentum RSI','Confluencia técnica','Ruptura + Momentum','Reversión técnica']
+    assets = list(ASSETS.keys())
+    today = timezone.localdate()
+    presentation_day = ((today.toordinal() - 1) % 4) + 1
+    rng = random.Random(f'demo-traders-{today.isoformat()}-day-{presentation_day}')
+
+    names = []
+    for first in first_names:
+        for last in last_names:
+            names.append(f'{first} {last}')
+    rng.shuffle(names)
+
     profiles = []
-    for index, strategy in enumerate(strategies):
-        row = stats.get(strategy, {})
+    for index in range(100):
+        capital = rng.randint(80, 2500)
+        gain = round(rng.uniform(3.5, 42.0), 2)
+        win_rate = round(rng.uniform(58.0, 83.5), 1)
+        trades = rng.randint(14, 96)
         profiles.append({
-            'name': f"Trader {names[index]}",
-            'strategy': strategy,
-            'accuracy': row.get('accuracy') if row.get('total') else None,
-            'total': row.get('total', 0),
-            'wins': row.get('wins', 0),
-            'label': 'DATOS MEDIDOS' if row.get('total') else 'EN OBSERVACIÓN',
+            'rank': index + 1,
+            'name': names[index],
+            'strategy': rng.choice(strategies),
+            'asset': rng.choice(assets),
+            'trades': trades,
+            'win_rate': win_rate,
+            'gain_pct': gain,
+            'gain_usd': round(capital * gain / 100, 2),
+            'demo': True,
         })
-    rng.shuffle(profiles)
-    return profiles
+
+    profiles.sort(key=lambda item: (item['gain_pct'], item['win_rate']), reverse=True)
+    for index, item in enumerate(profiles, start=1):
+        item['rank'] = index
+
+    return {
+        'day': presentation_day,
+        'profiles': profiles,
+        'top3': profiles[:3],
+    }
 
 
+def daily_trader_profiles():
+    demo = demo_trader_profiles()
+    return demo['top3']
 def signals_dashboard(request):
     registration = current_vip_registration(request)
     if not registration:
@@ -251,6 +285,7 @@ def signals_dashboard(request):
         'timeframes': TIMEFRAMES,
         'leaderboard': strategy_leaderboard(),
         'daily_traders': daily_trader_profiles(),
+        'demo_traders': demo_trader_profiles(),
         'summary': summary,
         'support_messages': registration.support_messages.all()[:80],
         'reference_payout': settings.SIGNAL_REFERENCE_PAYOUT,
